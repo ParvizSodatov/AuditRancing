@@ -44,7 +44,7 @@ export const INDICATOR_GROUPS: IndicatorGroup[] = [
         options: [none,
           { label: 'Более 30 тыс. сомони (4)', score: 4 },
           { label: 'Более 300 тыс. сомони (8)', score: 8 },
-          { label: 'Более 3 млн сомони (10)', score: 10 },
+          { label: 'Более 30 тыс. сомони (10)', score: 10 },
         ],
       },
       {

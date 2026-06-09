@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AuditOrg, OrgWithRating, RankMode } from './types';
-import { DEFAULT_SCORES, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS } from './types';
+import { DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS } from './types';
 import { computeRatings } from './utils/ratingCalculator';
-import { getOrgs, saveOrg, deleteOrg, getSettings, saveSettings } from './utils/storage';
+import { getSettings, saveSettings } from './utils/storage';
+import { api } from './utils/api';
 import RatingBadge from './components/RatingBadge';
 import OrgEditor from './pages/OrgEditor';
 import ResultsPage from './pages/ResultsPage';
@@ -17,12 +18,37 @@ const NAV_TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function App() {
-  const [orgs, setOrgs] = useState<AuditOrg[]>(() => getOrgs());
+  const [orgs, setOrgs] = useState<AuditOrg[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('orgs');
-  const [selectedId, setSelectedId] = useState<string | null>(() => getOrgs()[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [rankMode, setRankMode] = useState<RankMode>(() => getSettings().rankMode);
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Загрузка списка с сервера. Возвращает актуальный список для последующей логики.
+  const reload = useCallback(async (): Promise<AuditOrg[]> => {
+    try {
+      const list = await api.listOrgs();
+      setOrgs(list);
+      setError(null);
+      return list;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось загрузить данные с сервера');
+      return [];
+    }
+  }, []);
+
+  // Первичная загрузка организаций из БД.
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const list = await reload();
+      setSelectedId(prev => prev ?? list[0]?.id ?? null);
+      setLoading(false);
+    })();
+  }, [reload]);
 
   // Сохранение режима ранжирования между сессиями.
   useEffect(() => {
@@ -34,32 +60,37 @@ export default function App() {
 
   const openAdd = () => { setNewName(''); setAddOpen(true); };
 
-  const confirmAdd = () => {
+  const confirmAdd = async () => {
     const name = newName.trim() || `Организация ${orgs.length + 1}`;
-    const newOrg: AuditOrg = {
-      id: Date.now().toString(),
-      name,
-      createdAt: new Date().toLocaleDateString('ru-RU'),
-      kScores: { ...DEFAULT_SCORES },
-    };
-    saveOrg(newOrg);
-    setOrgs(getOrgs());
-    setSelectedId(newOrg.id);
-    setActiveTab('orgs');
-    setAddOpen(false);
+    try {
+      const created = await api.createOrg({ name });
+      await reload();
+      setSelectedId(created.id);
+      setActiveTab('orgs');
+      setAddOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось создать организацию');
+    }
   };
 
-  const handleSave = useCallback((org: AuditOrg) => {
-    saveOrg(org);
-    setOrgs(getOrgs());
-  }, []);
+  const handleSave = useCallback(async (org: AuditOrg) => {
+    try {
+      await api.updateOrg(org.id, { name: org.name, kScores: org.kScores });
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось сохранить изменения');
+    }
+  }, [reload]);
 
-  const handleDelete = useCallback((id: string) => {
-    deleteOrg(id);
-    const updated = getOrgs();
-    setOrgs(updated);
-    setSelectedId(prev => prev === id ? (updated[0]?.id ?? null) : prev);
-  }, []);
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      await api.deleteOrg(id);
+      const updated = await reload();
+      setSelectedId(prev => prev === id ? (updated[0]?.id ?? null) : prev);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось удалить организацию');
+    }
+  }, [reload]);
 
   return (
     <div style={{ background: '#ede8d8', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -107,6 +138,19 @@ export default function App() {
         </div>
       </header>
 
+      {/* ── Баннер ошибки соединения с API ── */}
+      {error && (
+        <div style={{ background: '#fbeeee', borderBottom: '1px solid #e8aeae', color: '#b03030', padding: '10px 24px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <span>⚠ {error}. Проверьте, что бэкенд запущен (npm run dev в папке backend).</span>
+          <button
+            onClick={() => { setLoading(true); reload().finally(() => setLoading(false)); }}
+            style={{ flexShrink: 0, border: '1px solid #e8aeae', background: '#fff', color: '#b03030', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            Повторить
+          </button>
+        </div>
+      )}
+
       {/* ── BODY ── */}
       <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', display: 'flex', flex: 1 }}>
         {/* ── SIDEBAR ── */}
@@ -125,7 +169,7 @@ export default function App() {
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {rated.length === 0 && (
               <p style={{ color: '#9a8a70', fontSize: '12px', textAlign: 'center', padding: '24px 16px' }}>
-                Нет организаций. Нажмите «Добавить».
+                {loading ? 'Загрузка…' : 'Нет организаций. Нажмите «Добавить».'}
               </p>
             )}
             {rated.map(org => (

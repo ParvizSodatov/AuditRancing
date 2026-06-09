@@ -1,0 +1,25 @@
+# Render Blueprint: бэкенд AuditRank + база PostgreSQL.
+# Деплой: Render → New → Blueprint → подключить этот репозиторий.
+services:
+  - type: web
+    name: auditrank-api
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # DATABASE_URL подставляется автоматически из базы ниже.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: auditrank-db
+          property: connectionString
+      # CORS_ORIGIN задаётся вручную в дашборде = адрес фронта на Vercel.
+      - key: CORS_ORIGIN
+        sync: false
+
+databases:
+  - name: auditrank-db
+    plan: free

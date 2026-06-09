@@ -4,11 +4,17 @@ REST API на **Node.js + Express + TypeScript** (ESM).
 
 ## Запуск
 
+Нужен запущенный **PostgreSQL** и созданная база (по умолчанию `auditrank`):
+
 ```bash
+createdb auditrank     # или через pgAdmin: Databases → Create → Database
+
 npm install
-cp .env.example .env   # настройте переменные при необходимости
+cp .env.example .env   # пропишите DATABASE_URL под свой Postgres
 npm run dev            # режим разработки с авто-перезапуском (tsx watch)
 ```
+
+Таблица `orgs` создаётся автоматически при первом старте (`initDb`).
 
 Production:
 
@@ -24,6 +30,7 @@ npm start              # node dist/index.js
 | `PORT`         | `4000`                    | Порт HTTP-сервера                   |
 | `CORS_ORIGIN`  | `*`                       | Разрешённый источник CORS (фронт)   |
 | `NODE_ENV`     | `development`             | Окружение                           |
+| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/auditrank` | Подключение к PostgreSQL |
 
 ## Архитектура
 
@@ -37,7 +44,7 @@ src/
 ├── routes/               # маршруты (HTTP → контроллеры)
 ├── controllers/          # разбор запроса/ответа, валидация
 ├── services/             # бизнес-логика (без знания об HTTP)
-├── data/                 # хранилище (сейчас in-memory, легко заменить на БД)
+├── data/                 # хранилище: пул PostgreSQL + таблица orgs (JSONB баллы)
 ├── middleware/           # обработка ошибок и 404
 └── types/                # доменные типы (контракт с фронтендом)
 ```
@@ -55,5 +62,5 @@ src/
 | `PUT`    | `/api/orgs/:id` | Обновить организацию           |
 | `DELETE` | `/api/orgs/:id` | Удалить организацию            |
 
-> Данные хранятся в памяти процесса и сбрасываются при перезапуске. Слой `data/`
-> изолирован, чтобы позже подключить настоящую БД без правок в сервисах.
+> Данные хранятся в **PostgreSQL** (таблица `orgs`, баллы — в колонке `k_scores`
+> типа JSONB) и переживают перезапуск сервера.

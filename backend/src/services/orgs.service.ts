@@ -4,15 +4,15 @@ import { DEFAULT_SCORES, type AuditOrg, type OrgInput } from '../types/index.js'
 
 /** Бизнес-логика работы с организациями. Не знает об HTTP. */
 export const orgsService = {
-  list(): AuditOrg[] {
+  list(): Promise<AuditOrg[]> {
     return orgStore.list();
   },
 
-  getById(id: string): AuditOrg | undefined {
+  getById(id: string): Promise<AuditOrg | undefined> {
     return orgStore.get(id);
   },
 
-  create(input: OrgInput): AuditOrg {
+  create(input: OrgInput): Promise<AuditOrg> {
     const org: AuditOrg = {
       id: randomUUID(),
       name: input.name.trim(),
@@ -22,8 +22,8 @@ export const orgsService = {
     return orgStore.save(org);
   },
 
-  update(id: string, input: OrgInput): AuditOrg | undefined {
-    const existing = orgStore.get(id);
+  async update(id: string, input: OrgInput): Promise<AuditOrg | undefined> {
+    const existing = await orgStore.get(id);
     if (!existing) return undefined;
     const updated: AuditOrg = {
       ...existing,
@@ -33,7 +33,7 @@ export const orgsService = {
     return orgStore.save(updated);
   },
 
-  remove(id: string): boolean {
+  remove(id: string): Promise<boolean> {
     return orgStore.remove(id);
   },
 };

@@ -33,14 +33,48 @@ npm start        # запуск собранной версии
 
 Подробнее — [backend/README.md](backend/README.md).
 
-## Деплой на Vercel
+## Деплой (глобально)
 
-Корневой [vercel.json](vercel.json) настроен на сборку **фронтенда** из подпапки
-`frontend/` без изменения настроек проекта в дашборде Vercel:
+Приложение состоит из трёх частей: **фронтенд** (Vercel), **бэкенд** (Render) и
+**база данных** PostgreSQL (managed-база Render). Порядок настройки:
 
-- `installCommand` / `buildCommand` выполняются с `--prefix frontend`;
-- результат берётся из `frontend/dist`;
-- SPA-маршруты разрешаются через `rewrites` на `/index.html`.
+### 1. Бэкенд + база — Render
 
-Бэкенд деплоится отдельно (например, как самостоятельный сервис на Render/Railway
-или как serverless-функции) — фронтенд от этого не зависит.
+Корневой [render.yaml](render.yaml) уже описывает веб-сервис и базу PostgreSQL.
+
+1. Render → **New → Blueprint** → подключить этот репозиторий.
+2. Render создаст сервис `auditrank-api` и базу `auditrank-db`, сам подставит
+   `DATABASE_URL`. Таблица `orgs` создаётся при первом запуске автоматически.
+3. После деплоя получите адрес вида `https://auditrank-api.onrender.com`.
+
+### 2. Фронтенд — Vercel
+
+Корневой [vercel.json](vercel.json) собирает **фронтенд** из подпапки `frontend/`:
+`buildCommand` с `--prefix frontend`, результат из `frontend/dist`, SPA-маршруты
+через `rewrites` на `/index.html`.
+
+В настройках проекта Vercel задайте переменную окружения:
+
+```
+VITE_API_URL = https://auditrank-api.onrender.com/api
+```
+
+(адрес бэка с шага 1, см. [frontend/.env.example](frontend/.env.example)).
+
+### 3. Связать CORS
+
+В дашборде Render у сервиса `auditrank-api` задайте переменную:
+
+```
+CORS_ORIGIN = https://ваш-проект.vercel.app
+```
+
+(адрес фронта с шага 2). Иначе браузер заблокирует запросы между доменами.
+
+```
+[Браузер] → Vercel (фронт) → Render (бэк /api) → PostgreSQL (Render)
+```
+
+> Альтернатива базе: бесплатный Postgres на [Neon](https://neon.tech) — тогда
+> вместо базы из `render.yaml` пропишите её `DATABASE_URL` вручную в сервисе Render.
+> SSL включается автоматически для любой нелокальной базы.
