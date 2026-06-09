@@ -6,7 +6,9 @@ services:
     runtime: node
     rootDir: backend
     plan: free
-    buildCommand: npm install && npm run build
+    # --include=dev обязательно: NODE_ENV=production иначе пропускает devDependencies (typescript),
+    # а без tsc сборка падает. Сами зависимости рантайма (express, pg) лежат в dependencies.
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
