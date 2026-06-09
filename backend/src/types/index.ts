@@ -31,3 +31,18 @@ export interface OrgInput {
   name: string;
   kScores?: Partial<OrgKScores>;
 }
+
+/** Пользователь системы (для входа в кабинет рейтингового органа). */
+export interface User {
+  id: string;
+  login: string;
+  /** bcrypt-хеш пароля. Наружу (в API) никогда не отдаётся. */
+  passwordHash: string;
+  createdAt: string;
+}
+
+/** Полезная нагрузка JWT. */
+export interface JwtPayload {
+  sub: string;
+  login: string;
+}

@@ -1,4 +1,5 @@
 import type { AuditOrg, OrgKScores } from '../types';
+import { getToken, setToken, clearToken } from './auth';
 
 /** Базовый адрес API. Меняется через VITE_API_URL при сборке. */
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
@@ -31,12 +32,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   inFlight += 1;
   emit();
   try {
+    const token = getToken();
     const res = await fetch(`${API_URL}${path}`, {
-      headers: { 'Content-Type': 'application/json' },
       ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options?.headers,
+      },
     });
 
     if (!res.ok) {
+      // Токен истёк/недействителен — разлогиниваем (UI вернёт на страницу входа).
+      if (res.status === 401) clearToken();
       let message = `Ошибка запроса (${res.status})`;
       try {
         const body = await res.json();
@@ -54,8 +62,44 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 }
 
+/** Данные авторизованного пользователя (без пароля). */
+export interface AuthUser {
+  id: string;
+  login: string;
+}
+
 /** Клиент REST API организаций. */
 export const api = {
+  /** Вход: проверяет логин/пароль, сохраняет токен и возвращает данные пользователя. */
+  async login(login: string, password: string): Promise<AuthUser> {
+    const { token, user } = await request<{ token: string; user: AuthUser }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ login, password }),
+    });
+    setToken(token);
+    return user;
+  },
+
+  /** Проверка текущей сессии по сохранённому токену. */
+  me: (): Promise<AuthUser> => request('/auth/me'),
+
+  /** Смена пароля текущего пользователя. */
+  changePassword: (currentPassword: string, newPassword: string): Promise<void> =>
+    request('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
+  /** Смена логина текущего пользователя. Возвращает обновлённые данные. */
+  changeLogin: (currentPassword: string, newLogin: string): Promise<AuthUser> =>
+    request('/auth/change-login', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newLogin }),
+    }),
+
+  /** Выход: просто удаляет токен на клиенте. */
+  logout: (): void => clearToken(),
+
   listOrgs: (): Promise<AuditOrg[]> => request('/orgs'),
 
   createOrg: (input: OrgInput): Promise<AuditOrg> =>

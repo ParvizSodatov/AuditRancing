@@ -3,12 +3,15 @@ import type { AuditOrg, OrgWithRating, RankMode } from './types';
 import { DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS } from './types';
 import { computeRatings } from './utils/ratingCalculator';
 import { getSettings, saveSettings } from './utils/storage';
-import { api } from './utils/api';
+import { api, type AuthUser } from './utils/api';
+import { getToken, onUnauthorized } from './utils/auth';
 import { useToast } from './components/Toast';
 import RatingBadge from './components/RatingBadge';
 import OrgEditor from './pages/OrgEditor';
 import ResultsPage from './pages/ResultsPage';
 import ChartsPage from './pages/ChartsPage';
+import LoginPage from './pages/LoginPage';
+import PasswordInput from './components/PasswordInput';
 
 type Tab = 'orgs' | 'results' | 'charts';
 
@@ -20,6 +23,9 @@ const NAV_TABS: { id: Tab; label: string }[] = [
 
 export default function App() {
   const toast = useToast();
+  // Авторизация: user === null — показываем страницу входа.
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [orgs, setOrgs] = useState<AuditOrg[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('orgs');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -28,6 +34,13 @@ export default function App() {
   const [newName, setNewName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Модалка профиля: смена логина и/или пароля в одном месте.
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profLogin, setProfLogin] = useState('');
+  const [profNewPw, setProfNewPw] = useState('');
+  const [profConfirmPw, setProfConfirmPw] = useState('');
+  const [profCurrentPw, setProfCurrentPw] = useState('');
+  const [profBusy, setProfBusy] = useState(false);
 
   // Загрузка списка с сервера. Возвращает актуальный список для последующей логики.
   const reload = useCallback(async (): Promise<AuditOrg[]> => {
@@ -42,44 +55,35 @@ export default function App() {
     }
   }, []);
 
-  // Первичная загрузка организаций из БД.
+  // Проверка сохранённой сессии при запуске + реакция на разлогин (истёкший токен).
   useEffect(() => {
+    const unsubscribe = onUnauthorized(() => setUser(null));
+    (async () => {
+      if (getToken()) {
+        try {
+          setUser(await api.me());
+        } catch { /* токен невалиден — останемся на странице входа */ }
+      }
+      setAuthChecked(true);
+    })();
+    return unsubscribe;
+  }, []);
+
+  // Первичная загрузка организаций из БД — только для авторизованного пользователя.
+  useEffect(() => {
+    if (!user) return;
     (async () => {
       setLoading(true);
       const list = await reload();
       setSelectedId(prev => prev ?? list[0]?.id ?? null);
       setLoading(false);
     })();
-  }, [reload]);
+  }, [reload, user]);
 
   // Сохранение режима ранжирования между сессиями.
   useEffect(() => {
     saveSettings({ weights: DEFAULT_WEIGHTS, thresholds: DEFAULT_THRESHOLDS, rankMode });
   }, [rankMode]);
-
-  const rated: OrgWithRating[] = computeRatings(orgs, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, rankMode);
-  const selected = rated.find(o => o.id === selectedId) ?? null;
-
-  const openAdd = () => { setNewName(''); setAddOpen(true); };
-
-  const confirmAdd = async () => {
-    const name = newName.trim();
-    if (!name) {
-      toast.error('Введите название организации');
-      return;
-    }
-    try {
-      const created = await api.createOrg({ name });
-      await reload();
-      setSelectedId(created.id);
-      setActiveTab('orgs');
-      setAddOpen(false);
-      toast.success(`Организация «${name}» добавлена`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось создать организацию');
-      toast.error('Не удалось создать организацию');
-    }
-  };
 
   const handleSave = useCallback(async (org: AuditOrg) => {
     try {
@@ -99,6 +103,100 @@ export default function App() {
       setError(e instanceof Error ? e.message : 'Не удалось удалить организацию');
     }
   }, [reload]);
+
+  const handleLogout = () => {
+    api.logout();
+    setUser(null);
+    setOrgs([]);
+    setSelectedId(null);
+  };
+
+  // Пока проверяем сохранённый токен — короткая заглушка, чтобы не мигала форма входа.
+  if (!authChecked) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#1a1e2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a7e6a', fontSize: '14px' }}>
+        Загрузка…
+      </div>
+    );
+  }
+
+  // Не авторизован — показываем страницу входа.
+  if (!user) {
+    return <LoginPage onLogin={setUser} />;
+  }
+
+  const rated: OrgWithRating[] = computeRatings(orgs, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, rankMode);
+  const selected = rated.find(o => o.id === selectedId) ?? null;
+
+  const openAdd = () => { setNewName(''); setAddOpen(true); };
+
+  const openProfile = () => {
+    setProfLogin(user?.login ?? '');
+    setProfNewPw(''); setProfConfirmPw(''); setProfCurrentPw('');
+    setProfileOpen(true);
+  };
+
+  const saveProfile = async () => {
+    if (profBusy) return;
+    const nextLogin = profLogin.trim();
+    const loginChanged = nextLogin !== (user?.login ?? '');
+    const wantPwChange = profNewPw.length > 0 || profConfirmPw.length > 0;
+
+    // Проверки до обращения к серверу.
+    if (!loginChanged && !wantPwChange) {
+      toast.error('Нет изменений');
+      return;
+    }
+    if (loginChanged && nextLogin.length < 3) {
+      toast.error('Логин должен быть не короче 3 символов');
+      return;
+    }
+    if (wantPwChange) {
+      if (profNewPw.length < 6) { toast.error('Новый пароль должен быть не короче 6 символов'); return; }
+      if (profNewPw !== profConfirmPw) { toast.error('Пароли не совпадают'); return; }
+    }
+    if (!profCurrentPw) {
+      toast.error('Введите текущий пароль для подтверждения');
+      return;
+    }
+
+    setProfBusy(true);
+    try {
+      // Сначала логин (не трогает пароль), затем пароль (он делает текущий пароль недействительным).
+      if (loginChanged) {
+        const updated = await api.changeLogin(profCurrentPw, nextLogin);
+        setUser(updated);
+      }
+      if (wantPwChange) {
+        await api.changePassword(profCurrentPw, profNewPw);
+      }
+      setProfileOpen(false);
+      toast.success('Профиль обновлён');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не удалось сохранить профиль');
+    } finally {
+      setProfBusy(false);
+    }
+  };
+
+  const confirmAdd = async () => {
+    const name = newName.trim();
+    if (!name) {
+      toast.error('Введите название организации');
+      return;
+    }
+    try {
+      const created = await api.createOrg({ name });
+      await reload();
+      setSelectedId(created.id);
+      setActiveTab('orgs');
+      setAddOpen(false);
+      toast.success(`Организация «${name}» добавлена`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось создать организацию');
+      toast.error('Не удалось создать организацию');
+    }
+  };
 
   return (
     <div style={{ background: '#ede8d8', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -142,6 +240,28 @@ export default function App() {
               ))}
             </nav>
             <span style={{ color: '#8a7e6a', fontSize: '13px' }}>{orgs.length} орг.</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '16px', borderLeft: '1px solid #2e3346' }}>
+              <button
+                onClick={openProfile}
+                title="Профиль: сменить логин или пароль"
+                style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'transparent', border: '1px solid #3a4057', borderRadius: '6px', color: '#c9a84c', fontSize: '13px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', transition: 'color 0.15s, border-color 0.15s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#c9a84c'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#3a4057'; }}
+              >
+                <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#c9a84c', color: '#1a1e2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700 }}>
+                  {user.login.slice(0, 1).toUpperCase()}
+                </span>
+                {user.login}
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{ background: 'transparent', border: '1px solid #3a4057', borderRadius: '6px', color: '#8a7e6a', fontSize: '12px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', transition: 'color 0.15s, border-color 0.15s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = '#c9a84c'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#8a7e6a'; (e.currentTarget as HTMLElement).style.borderColor = '#3a4057'; }}
+              >
+                Выйти
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -263,6 +383,97 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* ── Модалка профиля: логин + пароль в одном месте ── */}
+      {profileOpen && (
+        <div
+          onClick={() => !profBusy && setProfileOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(20,20,30,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#faf7f0', borderRadius: '14px', border: '1px solid #d4c8ae', boxShadow: '0 12px 40px rgba(0,0,0,0.3)', width: '440px', maxWidth: '92vw', padding: '24px' }}
+          >
+            <h2 style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: 700, color: '#2c2820' }}>Профиль</h2>
+            <p style={{ margin: '0 0 18px', fontSize: '12.5px', color: '#9a8a70' }}>Измените логин и/или пароль и подтвердите текущим паролем.</p>
+
+            {/* Логин */}
+            <label style={labelStyle}>Логин</label>
+            <input
+              autoFocus
+              value={profLogin}
+              onChange={e => setProfLogin(e.target.value)}
+              placeholder="Логин"
+              autoComplete="username"
+              style={fieldStyle}
+            />
+
+            {/* Новый пароль (необязательно) */}
+            <label style={{ ...labelStyle, marginTop: '16px' }}>Новый пароль</label>
+            <PasswordInput
+              value={profNewPw}
+              onChange={setProfNewPw}
+              placeholder="Оставьте пустым, чтобы не менять"
+              autoComplete="new-password"
+            />
+            <PasswordInput
+              value={profConfirmPw}
+              onChange={setProfConfirmPw}
+              placeholder="Повторите новый пароль"
+              autoComplete="new-password"
+              style={{ marginTop: '10px' }}
+            />
+
+            {/* Подтверждение текущим паролем */}
+            <div style={{ borderTop: '1px solid #e6ddca', margin: '18px 0 14px' }} />
+            <label style={labelStyle}>Текущий пароль <span style={{ color: '#b03030' }}>*</span></label>
+            <PasswordInput
+              value={profCurrentPw}
+              onChange={setProfCurrentPw}
+              onKeyDown={e => { if (e.key === 'Enter') saveProfile(); if (e.key === 'Escape' && !profBusy) setProfileOpen(false); }}
+              placeholder="Подтвердите изменения паролем"
+              autoComplete="current-password"
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+              <button
+                onClick={() => setProfileOpen(false)}
+                disabled={profBusy}
+                style={{ padding: '9px 18px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', border: '1px solid #d4c8ae', background: 'transparent', color: '#6a5e48', cursor: profBusy ? 'default' : 'pointer' }}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={saveProfile}
+                disabled={profBusy}
+                style={{ padding: '9px 22px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', border: 'none', background: profBusy ? '#3a4057' : '#1a1e2e', color: '#fff', cursor: profBusy ? 'default' : 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+              >
+                {profBusy ? 'Сохранение…' : 'Сохранить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '12.5px',
+  fontWeight: 600,
+  color: '#6a5e48',
+  marginBottom: '6px',
+};
+
+const fieldStyle: React.CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  fontSize: '14px',
+  padding: '11px 13px',
+  border: '1px solid #c8bcaa',
+  borderRadius: '8px',
+  background: '#fff',
+  color: '#2c2820',
+  outline: 'none',
+};

@@ -1,7 +1,11 @@
+import { Download, Printer } from 'lucide-react';
 import type { OrgWithRating, RankMode } from '../types';
 import { MAX_TOTAL } from '../utils/ratingCalculator';
 import { LEVEL_STYLES } from '../components/RatingBadge';
 import RatingBadge from '../components/RatingBadge';
+import { exportResultsToExcel } from '../utils/exportExcel';
+import { printResults } from '../utils/printResults';
+import { useToast } from '../components/Toast';
 
 interface Props {
   orgs: OrgWithRating[];
@@ -12,9 +16,29 @@ interface Props {
 const COLS = ['#', 'Организация', 'Балл', 'ΣА', 'ΣБ', 'ΣВ', 'Pj', 'Качество (Q)', 'Уровень'];
 
 export default function ResultsPage({ orgs, mode, onMode }: Props) {
+  const toast = useToast();
   const sorted = [...orgs].sort((a, b) =>
     mode === 'score' ? b.totalScore - a.totalScore : a.pj - b.pj
   );
+
+  const handleExport = async () => {
+    try {
+      await exportResultsToExcel(orgs, mode);
+      toast.success('Файл Excel сформирован');
+    } catch (e) {
+      console.error('Ошибка экспорта в Excel:', e);
+      toast.error(e instanceof Error ? `Ошибка экспорта: ${e.message}` : 'Не удалось сформировать файл');
+    }
+  };
+
+  const handlePrint = () => {
+    try {
+      printResults(orgs, mode);
+    } catch (e) {
+      console.error('Ошибка печати:', e);
+      toast.error(e instanceof Error ? e.message : 'Не удалось открыть окно печати');
+    }
+  };
 
   return (
     <div style={{ padding: '24px 28px' }}>
@@ -43,6 +67,57 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
             </button>
           ))}
         </div>
+
+        {/* ── Печать ── */}
+        <button
+          onClick={handlePrint}
+          disabled={orgs.length === 0}
+          title={orgs.length === 0 ? 'Нет данных для печати' : 'Открыть окно печати'}
+          style={{
+            marginLeft: 'auto',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '7px',
+            padding: '8px 16px',
+            fontSize: '13px',
+            fontWeight: 600,
+            borderRadius: '8px',
+            border: '1px solid #c8bcaa',
+            background: orgs.length === 0 ? '#e3dcc8' : '#faf7f0',
+            color: orgs.length === 0 ? '#a89c84' : '#4a3e2e',
+            cursor: orgs.length === 0 ? 'not-allowed' : 'pointer',
+            boxShadow: orgs.length === 0 ? 'none' : '0 1px 2px rgba(40,30,10,0.1)',
+            transition: 'background 0.15s',
+          }}
+        >
+          <Printer size={15} />
+          Печать
+        </button>
+
+        {/* ── Экспорт в Excel ── */}
+        <button
+          onClick={() => { void handleExport(); }}
+          disabled={orgs.length === 0}
+          title={orgs.length === 0 ? 'Нет данных для экспорта' : 'Скачать таблицу в формате .xlsx'}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '7px',
+            padding: '8px 16px',
+            fontSize: '13px',
+            fontWeight: 600,
+            borderRadius: '8px',
+            border: '1px solid #d4c8ae',
+            background: orgs.length === 0 ? '#e3dcc8' : '#1a1e2e',
+            color: orgs.length === 0 ? '#a89c84' : '#c9a84c',
+            cursor: orgs.length === 0 ? 'not-allowed' : 'pointer',
+            boxShadow: orgs.length === 0 ? 'none' : '0 1px 3px rgba(0,0,0,0.2)',
+            transition: 'background 0.15s',
+          }}
+        >
+          <Download size={15} />
+          Экспорт в Excel
+        </button>
       </div>
 
       <p style={{ fontSize: '12px', color: '#9a8a70', marginBottom: '18px' }}>
