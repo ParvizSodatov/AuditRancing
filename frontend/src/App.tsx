@@ -4,6 +4,7 @@ import { DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS } from './types';
 import { computeRatings } from './utils/ratingCalculator';
 import { getSettings, saveSettings } from './utils/storage';
 import { api } from './utils/api';
+import { useToast } from './components/Toast';
 import RatingBadge from './components/RatingBadge';
 import OrgEditor from './pages/OrgEditor';
 import ResultsPage from './pages/ResultsPage';
@@ -18,6 +19,7 @@ const NAV_TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function App() {
+  const toast = useToast();
   const [orgs, setOrgs] = useState<AuditOrg[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('orgs');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -61,15 +63,21 @@ export default function App() {
   const openAdd = () => { setNewName(''); setAddOpen(true); };
 
   const confirmAdd = async () => {
-    const name = newName.trim() || `Организация ${orgs.length + 1}`;
+    const name = newName.trim();
+    if (!name) {
+      toast.error('Введите название организации');
+      return;
+    }
     try {
       const created = await api.createOrg({ name });
       await reload();
       setSelectedId(created.id);
       setActiveTab('orgs');
       setAddOpen(false);
+      toast.success(`Организация «${name}» добавлена`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось создать организацию');
+      toast.error('Не удалось создать организацию');
     }
   };
 
