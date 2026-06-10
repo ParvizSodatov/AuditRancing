@@ -3,7 +3,7 @@ import type { OrgWithRating, RankMode } from '../types';
 import { MAX_TOTAL } from '../utils/ratingCalculator';
 import { LEVEL_STYLES } from '../components/RatingBadge';
 import RatingBadge from '../components/RatingBadge';
-import { exportResultsToExcel } from '../utils/exportExcel';
+import { exportResultsToExcel, exportOrgToExcel } from '../utils/exportExcel';
 import { printResults } from '../utils/printResults';
 import { useToast } from '../components/Toast';
 
@@ -13,7 +13,7 @@ interface Props {
   onMode: (mode: RankMode) => void;
 }
 
-const COLS = ['#', 'Организация', 'Балл', 'ΣА', 'ΣБ', 'ΣВ', 'Pj', 'Качество (Q)', 'Уровень'];
+const COLS = ['#', 'Организация', 'Балл', 'ΣА', 'ΣБ', 'ΣВ', 'Pj', 'Качество (Q)', 'Уровень', 'Excel'];
 
 export default function ResultsPage({ orgs, mode, onMode }: Props) {
   const toast = useToast();
@@ -27,6 +27,16 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
       toast.success('Файл Excel сформирован');
     } catch (e) {
       console.error('Ошибка экспорта в Excel:', e);
+      toast.error(e instanceof Error ? `Ошибка экспорта: ${e.message}` : 'Не удалось сформировать файл');
+    }
+  };
+
+  const handleExportOrg = async (org: OrgWithRating) => {
+    try {
+      await exportOrgToExcel(org);
+      toast.success(`Файл «${org.name}» сформирован`);
+    } catch (e) {
+      console.error('Ошибка экспорта организации:', e);
       toast.error(e instanceof Error ? `Ошибка экспорта: ${e.message}` : 'Не удалось сформировать файл');
     }
   };
@@ -141,7 +151,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
                     letterSpacing: '0.06em',
                     fontWeight: 600,
                     padding: '13px 14px',
-                    textAlign: i <= 1 ? 'left' : i === 8 ? 'center' : 'right',
+                    textAlign: i <= 1 ? 'left' : i === 8 || i === 9 ? 'center' : 'right',
                     whiteSpace: 'nowrap',
                   }}
                 >
@@ -153,7 +163,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
           <tbody>
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ padding: '48px', textAlign: 'center', color: '#9a8a70' }}>
+                <td colSpan={10} style={{ padding: '48px', textAlign: 'center', color: '#9a8a70' }}>
                   Нет организаций для отображения
                 </td>
               </tr>
@@ -212,6 +222,23 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
                   {/* Уровень */}
                   <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                     <RatingBadge level={org.level} size="md" />
+                  </td>
+                  {/* Скачать Excel этой организации */}
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                    <button
+                      onClick={() => { void handleExportOrg(org); }}
+                      title={`Скачать Excel «${org.name}»`}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: '34px', height: '34px', borderRadius: '8px',
+                        border: '1px solid #d4c8ae', background: '#faf7f0', color: '#1a1e2e',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1a1e2e'; (e.currentTarget as HTMLElement).style.color = '#c9a84c'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#faf7f0'; (e.currentTarget as HTMLElement).style.color = '#1a1e2e'; }}
+                    >
+                      <Download size={16} />
+                    </button>
                   </td>
                 </tr>
               );
