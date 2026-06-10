@@ -5,11 +5,13 @@ import PasswordInput from '../components/PasswordInput';
 interface Props {
   /** Вызывается после успешного входа с данными пользователя. */
   onLogin: (user: AuthUser) => void;
+  /** Переход на экран «Забыли пароль». */
+  onForgot: () => void;
 }
 
 /** Страница входа: первое, что видит неавторизованный пользователь. */
-export default function LoginPage({ onLogin }: Props) {
-  const [login, setLogin] = useState('');
+export default function LoginPage({ onLogin, onForgot }: Props) {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -20,7 +22,7 @@ export default function LoginPage({ onLogin }: Props) {
     setError(null);
     setBusy(true);
     try {
-      const user = await api.login(login.trim(), password);
+      const user = await api.login(email.trim(), password);
       onLogin(user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось войти');
@@ -55,14 +57,18 @@ export default function LoginPage({ onLogin }: Props) {
         )}
 
         <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#6a5e48', marginBottom: '6px' }}>
-          Логин
+          Почта
         </label>
+        {/* type=text, а не email: чтобы браузер не блокировал вход старым учёткам
+            с «непочтовым» логином (формат почты проверяется только при сбросе/смене). */}
         <input
           autoFocus
-          value={login}
-          onChange={e => setLogin(e.target.value)}
-          placeholder="Введите логин"
-          autoComplete="username"
+          type="text"
+          inputMode="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          autoComplete="email"
           style={inputStyle}
         />
 
@@ -76,10 +82,20 @@ export default function LoginPage({ onLogin }: Props) {
           autoComplete="current-password"
         />
 
+        <div style={{ textAlign: 'right', marginTop: '10px' }}>
+          <button
+            type="button"
+            onClick={onForgot}
+            style={{ background: 'none', border: 'none', padding: 0, color: '#9a7a2c', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            Забыли пароль?
+          </button>
+        </div>
+
         <button
           type="submit"
           disabled={busy}
-          style={{ width: '100%', marginTop: '24px', background: busy ? '#3a4057' : '#1a1e2e', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', fontWeight: 600, cursor: busy ? 'default' : 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'background 0.15s' }}
+          style={{ width: '100%', marginTop: '18px', background: busy ? '#3a4057' : '#1a1e2e', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', fontWeight: 600, cursor: busy ? 'default' : 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'background 0.15s' }}
         >
           {busy ? 'Вход…' : 'Войти'}
         </button>

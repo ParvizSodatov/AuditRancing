@@ -35,7 +35,8 @@ export interface OrgInput {
 /** Пользователь системы (для входа в кабинет рейтингового органа). */
 export interface User {
   id: string;
-  login: string;
+  /** Почта — одновременно и логин для входа, и адрес для сброса пароля. */
+  email: string;
   /** bcrypt-хеш пароля. Наружу (в API) никогда не отдаётся. */
   passwordHash: string;
   createdAt: string;
@@ -44,5 +45,14 @@ export interface User {
 /** Полезная нагрузка JWT. */
 export interface JwtPayload {
   sub: string;
-  login: string;
+  email: string;
+}
+
+/** Токен для сброса пароля по ссылке из письма. */
+export interface PasswordResetToken {
+  /** SHA-256 хеш токена. Сырой токен хранится только в письме, в БД — лишь хеш. */
+  tokenHash: string;
+  userId: string;
+  expiresAt: string;
+  usedAt: string | null;
 }

@@ -29,9 +29,30 @@ export async function initDb(): Promise<void> {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id            TEXT PRIMARY KEY,
-      login         TEXT NOT NULL UNIQUE,
+      email         TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  // Миграция старых баз: колонка login → email (вход теперь по почте).
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'login')
+         AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email') THEN
+        ALTER TABLE users RENAME COLUMN login TO email;
+      END IF;
+    END $$;
+  `);
+
+  // Токены сброса пароля: в БД хранится только хеш токена, сырой — лишь в письме.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      token_hash TEXT PRIMARY KEY,
+      user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at    TIMESTAMPTZ
     );
   `);
 
@@ -40,7 +61,7 @@ export async function initDb(): Promise<void> {
 
 /**
  * Создаёт администратора по умолчанию, если таблица пользователей пуста.
- * Логин/пароль берутся из переменных окружения (ADMIN_LOGIN/ADMIN_PASSWORD).
+ * Почта/пароль берутся из переменных окружения (ADMIN_EMAIL/ADMIN_PASSWORD).
  */
 async function seedAdmin(): Promise<void> {
   const { rows } = await pool.query<{ count: string }>('SELECT COUNT(*)::int AS count FROM users');
@@ -48,8 +69,8 @@ async function seedAdmin(): Promise<void> {
 
   const passwordHash = await bcrypt.hash(config.adminPassword, 10);
   await pool.query(
-    'INSERT INTO users (id, login, password_hash) VALUES ($1, $2, $3)',
-    [randomUUID(), config.adminLogin, passwordHash],
+    'INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)',
+    [randomUUID(), config.adminEmail, passwordHash],
   );
-  console.log(`Создан администратор по умолчанию: логин "${config.adminLogin}"`);
+  console.log(`Создан администратор по умолчанию: почта "${config.adminEmail}"`);
 }

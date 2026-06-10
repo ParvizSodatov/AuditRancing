@@ -21,6 +21,15 @@ services:
       # CORS_ORIGIN задаётся вручную в дашборде = адрес фронта на Vercel.
       - key: CORS_ORIGIN
         sync: false
+      # APP_URL = адрес фронта на Vercel — на него ведёт ссылка сброса пароля из письма.
+      - key: APP_URL
+        sync: false
+      # Ключ Resend для отправки писем (создать на resend.com). Пока пуст — ссылка пишется в лог.
+      - key: RESEND_API_KEY
+        sync: false
+      # Адрес отправителя писем (подтверждённый в Resend домен; для теста — onboarding@resend.dev).
+      - key: MAIL_FROM
+        sync: false
 
 databases:
   - name: auditrank-db

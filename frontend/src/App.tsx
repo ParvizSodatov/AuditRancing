@@ -11,7 +11,18 @@ import OrgEditor from './pages/OrgEditor';
 import ResultsPage from './pages/ResultsPage';
 import ChartsPage from './pages/ChartsPage';
 import LoginPage from './pages/LoginPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import PasswordInput from './components/PasswordInput';
+
+/** Экран авторизации: обычный вход, восстановление или установка нового пароля по ссылке. */
+type AuthView = 'login' | 'forgot' | 'reset';
+
+/** Сырой токен сброса из ссылки в письме: /reset?token=... */
+function readResetToken(): string {
+  if (window.location.pathname !== '/reset') return '';
+  return new URLSearchParams(window.location.search).get('token') ?? '';
+}
 
 type Tab = 'orgs' | 'results' | 'charts';
 
@@ -26,6 +37,9 @@ export default function App() {
   // Авторизация: user === null — показываем страницу входа.
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  // Какой экран авторизации показывать. Если открыли ссылку из письма — сразу сброс пароля.
+  const [resetToken] = useState(readResetToken);
+  const [authView, setAuthView] = useState<AuthView>(() => (readResetToken() ? 'reset' : 'login'));
   const [orgs, setOrgs] = useState<AuditOrg[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('orgs');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -36,7 +50,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   // Модалка профиля: смена логина и/или пароля в одном месте.
   const [profileOpen, setProfileOpen] = useState(false);
-  const [profLogin, setProfLogin] = useState('');
+  const [profEmail, setProfEmail] = useState('');
   const [profNewPw, setProfNewPw] = useState('');
   const [profConfirmPw, setProfConfirmPw] = useState('');
   const [profCurrentPw, setProfCurrentPw] = useState('');
@@ -111,6 +125,17 @@ export default function App() {
     setSelectedId(null);
   };
 
+  // Возврат ко входу: чистим адрес от ?token, чтобы ссылка сброса не висела в URL.
+  const goToLogin = () => {
+    if (window.location.pathname === '/reset') window.history.replaceState(null, '', '/');
+    setAuthView('login');
+  };
+
+  // Открыли ссылку из письма — показываем установку нового пароля (приоритетнее всего).
+  if (authView === 'reset') {
+    return <ResetPasswordPage token={resetToken} onDone={goToLogin} />;
+  }
+
   // Пока проверяем сохранённый токен — короткая заглушка, чтобы не мигала форма входа.
   if (!authChecked) {
     return (
@@ -120,9 +145,12 @@ export default function App() {
     );
   }
 
-  // Не авторизован — показываем страницу входа.
+  // Не авторизован — вход или восстановление пароля.
   if (!user) {
-    return <LoginPage onLogin={setUser} />;
+    if (authView === 'forgot') {
+      return <ForgotPasswordPage onBack={() => setAuthView('login')} />;
+    }
+    return <LoginPage onLogin={setUser} onForgot={() => setAuthView('forgot')} />;
   }
 
   const rated: OrgWithRating[] = computeRatings(orgs, DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, rankMode);
@@ -131,24 +159,24 @@ export default function App() {
   const openAdd = () => { setNewName(''); setAddOpen(true); };
 
   const openProfile = () => {
-    setProfLogin(user?.login ?? '');
+    setProfEmail(user?.email ?? '');
     setProfNewPw(''); setProfConfirmPw(''); setProfCurrentPw('');
     setProfileOpen(true);
   };
 
   const saveProfile = async () => {
     if (profBusy) return;
-    const nextLogin = profLogin.trim();
-    const loginChanged = nextLogin !== (user?.login ?? '');
+    const nextEmail = profEmail.trim();
+    const emailChanged = nextEmail !== (user?.email ?? '');
     const wantPwChange = profNewPw.length > 0 || profConfirmPw.length > 0;
 
     // Проверки до обращения к серверу.
-    if (!loginChanged && !wantPwChange) {
+    if (!emailChanged && !wantPwChange) {
       toast.error('Нет изменений');
       return;
     }
-    if (loginChanged && nextLogin.length < 3) {
-      toast.error('Логин должен быть не короче 3 символов');
+    if (emailChanged && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      toast.error('Введите корректный адрес почты');
       return;
     }
     if (wantPwChange) {
@@ -162,9 +190,9 @@ export default function App() {
 
     setProfBusy(true);
     try {
-      // Сначала логин (не трогает пароль), затем пароль (он делает текущий пароль недействительным).
-      if (loginChanged) {
-        const updated = await api.changeLogin(profCurrentPw, nextLogin);
+      // Сначала почта (не трогает пароль), затем пароль (он делает текущий пароль недействительным).
+      if (emailChanged) {
+        const updated = await api.changeEmail(profCurrentPw, nextEmail);
         setUser(updated);
       }
       if (wantPwChange) {
@@ -243,15 +271,15 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '16px', borderLeft: '1px solid #2e3346' }}>
               <button
                 onClick={openProfile}
-                title="Профиль: сменить логин или пароль"
+                title="Профиль: сменить почту или пароль"
                 style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'transparent', border: '1px solid #3a4057', borderRadius: '6px', color: '#c9a84c', fontSize: '13px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', transition: 'color 0.15s, border-color 0.15s' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#c9a84c'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#3a4057'; }}
               >
                 <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#c9a84c', color: '#1a1e2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700 }}>
-                  {user.login.slice(0, 1).toUpperCase()}
+                  {user.email.slice(0, 1).toUpperCase()}
                 </span>
-                {user.login}
+                {user.email}
               </button>
               <button
                 onClick={handleLogout}
@@ -395,16 +423,17 @@ export default function App() {
             style={{ background: '#faf7f0', borderRadius: '14px', border: '1px solid #d4c8ae', boxShadow: '0 12px 40px rgba(0,0,0,0.3)', width: '440px', maxWidth: '92vw', padding: '24px' }}
           >
             <h2 style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: 700, color: '#2c2820' }}>Профиль</h2>
-            <p style={{ margin: '0 0 18px', fontSize: '12.5px', color: '#9a8a70' }}>Измените логин и/или пароль и подтвердите текущим паролем.</p>
+            <p style={{ margin: '0 0 18px', fontSize: '12.5px', color: '#9a8a70' }}>Измените почту и/или пароль и подтвердите текущим паролем.</p>
 
-            {/* Логин */}
-            <label style={labelStyle}>Логин</label>
+            {/* Почта */}
+            <label style={labelStyle}>Почта</label>
             <input
               autoFocus
-              value={profLogin}
-              onChange={e => setProfLogin(e.target.value)}
-              placeholder="Логин"
-              autoComplete="username"
+              type="email"
+              value={profEmail}
+              onChange={e => setProfEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
               style={fieldStyle}
             />
 

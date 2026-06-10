@@ -8,14 +8,14 @@ declare global {
   namespace Express {
     interface Request {
       userId?: string;
-      userLogin?: string;
+      userEmail?: string;
     }
   }
 }
 
 /**
  * Защищает маршрут: требует валидный JWT в заголовке Authorization: Bearer <token>.
- * При успехе кладёт userId/userLogin в req и передаёт управление дальше.
+ * При успехе кладёт userId/userEmail в req и передаёт управление дальше.
  */
 export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
   const header = req.headers.authorization ?? '';
@@ -26,6 +26,6 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
 
   const payload = authService.verifyToken(token);
   req.userId = payload.sub;
-  req.userLogin = payload.login;
+  req.userEmail = payload.email;
   next();
 }

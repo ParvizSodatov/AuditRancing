@@ -65,20 +65,34 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 /** Данные авторизованного пользователя (без пароля). */
 export interface AuthUser {
   id: string;
-  login: string;
+  email: string;
 }
 
 /** Клиент REST API организаций. */
 export const api = {
-  /** Вход: проверяет логин/пароль, сохраняет токен и возвращает данные пользователя. */
-  async login(login: string, password: string): Promise<AuthUser> {
+  /** Вход: проверяет почту/пароль, сохраняет токен и возвращает данные пользователя. */
+  async login(email: string, password: string): Promise<AuthUser> {
     const { token, user } = await request<{ token: string; user: AuthUser }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ login, password }),
+      body: JSON.stringify({ email, password }),
     });
     setToken(token);
     return user;
   },
+
+  /** Запрос ссылки для сброса пароля на почту. Ответ всегда успешный (не раскрывает наличие почты). */
+  forgotPassword: (email: string): Promise<{ ok: boolean }> =>
+    request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  /** Установка нового пароля по токену из письма. */
+  resetPassword: (token: string, newPassword: string): Promise<void> =>
+    request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }),
 
   /** Проверка текущей сессии по сохранённому токену. */
   me: (): Promise<AuthUser> => request('/auth/me'),
@@ -90,11 +104,11 @@ export const api = {
       body: JSON.stringify({ currentPassword, newPassword }),
     }),
 
-  /** Смена логина текущего пользователя. Возвращает обновлённые данные. */
-  changeLogin: (currentPassword: string, newLogin: string): Promise<AuthUser> =>
-    request('/auth/change-login', {
+  /** Смена почты текущего пользователя. Возвращает обновлённые данные. */
+  changeEmail: (currentPassword: string, newEmail: string): Promise<AuthUser> =>
+    request('/auth/change-email', {
       method: 'POST',
-      body: JSON.stringify({ currentPassword, newLogin }),
+      body: JSON.stringify({ currentPassword, newEmail }),
     }),
 
   /** Выход: просто удаляет токен на клиенте. */

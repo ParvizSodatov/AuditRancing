@@ -5,8 +5,10 @@ import { requireAuth } from '../middleware/requireAuth.js';
 const router = Router();
 
 router.post('/login', authController.login);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 router.get('/me', requireAuth, authController.me);
 router.post('/change-password', requireAuth, authController.changePassword);
-router.post('/change-login', requireAuth, authController.changeLogin);
+router.post('/change-email', requireAuth, authController.changeEmail);
 
 export default router;
