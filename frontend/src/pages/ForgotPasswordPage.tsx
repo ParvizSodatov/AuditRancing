@@ -33,7 +33,9 @@ export default function ForgotPasswordPage({ onBack }: Props) {
     <div style={pageStyle}>
       <form onSubmit={submit} style={cardStyle}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
-          <div style={logoStyle}>МФ</div>
+          <div style={logoStyle}>
+            <img src="/gerb.png" alt="Герб Республики Таджикистан" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
           <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#2c2820', textAlign: 'center' }}>
             Восстановление пароля
           </h1>
@@ -79,7 +81,7 @@ export default function ForgotPasswordPage({ onBack }: Props) {
 
 const pageStyle: React.CSSProperties = { minHeight: '100vh', background: '#1a1e2e', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' };
 const cardStyle: React.CSSProperties = { width: '380px', maxWidth: '92vw', background: '#faf7f0', border: '1px solid #d4c8ae', borderRadius: '16px', boxShadow: '0 16px 50px rgba(0,0,0,0.4)', padding: '32px 28px' };
-const logoStyle: React.CSSProperties = { width: '52px', height: '52px', borderRadius: '50%', background: '#c9a84c', color: '#1a1e2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '16px', marginBottom: '14px' };
+const logoStyle: React.CSSProperties = { width: '52px', height: '52px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px', overflow: 'hidden' };
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#6a5e48', marginBottom: '6px' };
 const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', fontSize: '14px', padding: '11px 13px', border: '1px solid #c8bcaa', borderRadius: '8px', background: '#fff', color: '#2c2820', outline: 'none' };
 const errorStyle: React.CSSProperties = { background: '#fbeeee', border: '1px solid #e8aeae', color: '#b03030', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', marginBottom: '16px' };

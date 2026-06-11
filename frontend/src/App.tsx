@@ -232,12 +232,12 @@ export default function App() {
       <header style={{ background: '#1a1e2e', borderBottom: '3px solid #c9a84c', position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#c9a84c', color: '#1a1e2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>
-              МФ
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+              <img src="/gerb.png" alt="Герб Республики Таджикистан" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
             <div>
               <div style={{ color: '#fff', fontWeight: 600, fontSize: '15px', lineHeight: 1 }}>
-                Рейтинг аудиторских организаций
+               Министерство финансов Республики Таджикистан
               </div>
               <div style={{ color: '#8a7e6a', fontSize: '11px', marginTop: '3px' }}>
                 Система присвоения рейтингов надёжности и качества услуг · рабочее место рейтингового органа

@@ -57,11 +57,13 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleNameBlur = () => {
-    // Тихо сохраняем переименование, только если имя не пустое.
-    if (name.trim() && name.trim() !== org.name) {
-      onSave({ id: org.id, name: name.trim(), createdAt: org.createdAt, kScores });
-    }
+  // Имя изменено и непустое — можно сохранять переименование.
+  const nameChanged = name.trim() !== '' && name.trim() !== org.name;
+
+  const handleRename = () => {
+    if (!nameChanged) return;
+    onSave({ id: org.id, name: name.trim(), createdAt: org.createdAt, kScores });
+    toast.success('Название организации изменено');
   };
 
   const handleDelete = () => {
@@ -86,7 +88,7 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
         <input
           value={name}
           onChange={e => setName(e.target.value)}
-          onBlur={handleNameBlur}
+          onKeyDown={e => { if (e.key === 'Enter') handleRename(); }}
           style={{
             background: showErrors && !name.trim() ? '#fbeeee' : 'transparent',
             border: showErrors && !name.trim() ? '1px solid #e8aeae' : '1px solid transparent',
@@ -101,14 +103,26 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
           }}
           placeholder="Название организации"
         />
-        <button
-          onClick={handleDelete}
-          style={{ color: '#b03030', border: '1px solid #e8aeae', background: '#fbeeee', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#b03030'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fbeeee'; (e.currentTarget as HTMLElement).style.color = '#b03030'; }}
-        >
-          Удалить
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+          {nameChanged && (
+            <button
+              onClick={handleRename}
+              style={{ color: '#1a1e2e', border: '1px solid #c9a84c', background: '#c9a84c', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#b8973f'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#c9a84c'; }}
+            >
+              Изменить
+            </button>
+          )}
+          <button
+            onClick={handleDelete}
+            style={{ color: '#b03030', border: '1px solid #e8aeae', background: '#fbeeee', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#b03030'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fbeeee'; (e.currentTarget as HTMLElement).style.color = '#b03030'; }}
+          >
+            Удалить
+          </button>
+        </div>
       </div>
 
       {/* ── Stats row ── */}
