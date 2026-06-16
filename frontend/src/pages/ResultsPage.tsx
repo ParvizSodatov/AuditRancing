@@ -18,7 +18,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
   const { t } = useTranslation();
   const toast = useToast();
 
-  const COLS = ['#', t('results.colName'), t('results.colScore'), t('results.colGroupA'), t('results.colGroupB'), t('results.colGroupC'), 'Pj', t('results.colQuality'), t('results.colLevel'), t('results.colExcel')];
+  const COLS = ['#', t('results.colName'), t('results.colScore'), t('results.colGroupA'), t('results.colGroupB'), t('results.colGroupC'), 'Методика', t('results.colQuality'), t('results.colLevel'), t('results.colExcel')];
 
   const sorted = [...orgs].sort((a, b) =>
     mode === 'score' ? b.totalScore - a.totalScore : a.pj - b.pj
@@ -54,7 +54,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
   };
 
   return (
-    <div style={{ padding: '24px 28px' }}>
+    <div style={{ padding: '24px 20px' }}>
       {/* ── Сегментированный переключатель режима ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '10px', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '13px', color: '#7a6f5e', fontWeight: 500 }}>{t('results.ranking')}</span>
@@ -141,7 +141,8 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
 
       {/* ── Таблица ── */}
       <div style={{ border: '1px solid #d4c8ae', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(40,30,10,0.08)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
+        <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', fontSize: '13.5px' }}>
           <thead>
             <tr style={{ background: '#1a1e2e' }}>
               {COLS.map((h, i) => {
@@ -158,7 +159,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
                       padding: '10px 14px',
                       textAlign: i <= 1 ? 'left' : i === 8 || i === 9 ? 'center' : isGroup ? 'center' : 'right',
                       whiteSpace: isGroup ? 'normal' : 'nowrap',
-                      width: isGroup ? '150px' : undefined,
+                      width: isGroup ? '115px' : undefined,
                       lineHeight: isGroup ? 1.3 : undefined,
                       verticalAlign: 'middle',
                     }}
@@ -254,6 +255,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       <p style={{ textAlign: 'center', fontSize: '11.5px', color: '#b0a28a', marginTop: '20px' }}>

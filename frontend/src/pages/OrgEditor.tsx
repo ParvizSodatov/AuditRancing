@@ -73,11 +73,11 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
 
   const stats = [
     { label: t('editor.totalScore').toUpperCase(), value: org.totalScore.toFixed(1) },
-    { label: 'ΣА', value: org.sumA.toFixed(1) },
-    { label: 'ΣБ', value: org.sumB.toFixed(1) },
-    { label: 'ΣВ', value: org.sumC.toFixed(1) },
-    { label: 'Pj', value: org.pj.toFixed(3) },
-    { label: 'Q', value: `${org.q.toFixed(0)}%` },
+    { label: t('results.colGroupA'), value: org.sumA.toFixed(1), wide: true },
+    { label: t('results.colGroupB'), value: org.sumB.toFixed(1), wide: true },
+    { label: t('results.colGroupC'), value: org.sumC.toFixed(1), wide: true },
+    { label: 'Методика', value: org.pj.toFixed(3) },
+    { label: t('results.colQuality'), value: `${org.q.toFixed(0)}%` },
   ];
 
   return (
@@ -126,22 +126,22 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
       </div>
 
       {/* ── Stats row ── */}
-      <div style={{ background: '#f0ece0', borderBottom: '1px solid #d4c8ae', padding: '12px 28px', display: 'flex', alignItems: 'center', gap: '32px', flexWrap: 'wrap', position: 'sticky', top: '53px', zIndex: 10 }}>
-        {stats.map(({ label, value }) => (
-          <div key={label} style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-            <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9a8a70' }}>
+      <div style={{ background: '#f0ece0', borderBottom: '1px solid #d4c8ae', padding: '12px 28px', display: 'flex', alignItems: 'stretch', gap: '32px', flexWrap: 'wrap', position: 'sticky', top: '53px', zIndex: 10 }}>
+        {stats.map(({ label, value, wide }) => (
+          <div key={label} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', lineHeight: 1, width: wide ? '150px' : undefined, flexShrink: 0 }}>
+            <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9a8a70', whiteSpace: wide ? 'normal' : 'nowrap', lineHeight: wide ? 1.3 : 1 }}>
               {label}
             </span>
-            <span style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'monospace', color: '#2c2820', marginTop: '2px' }}>
+            <span style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'monospace', color: '#2c2820', marginTop: '8px' }}>
               {value}
             </span>
           </div>
         ))}
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-          <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9a8a70' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', lineHeight: 1 }}>
+          <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9a8a70', whiteSpace: 'nowrap' }}>
             {t('editor.level')}
           </span>
-          <div style={{ marginTop: '4px' }}>
+          <div style={{ marginTop: '8px' }}>
             <RatingBadge level={org.level} size="lg" />
           </div>
         </div>
