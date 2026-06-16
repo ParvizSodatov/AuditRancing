@@ -18,7 +18,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
   const { t } = useTranslation();
   const toast = useToast();
 
-  const COLS = ['#', t('results.colName'), t('results.colScore'), 'ΣА', 'ΣБ', 'ΣВ', 'Pj', t('results.colQuality'), t('results.colLevel'), t('results.colExcel')];
+  const COLS = ['#', t('results.colName'), t('results.colScore'), t('results.colGroupA'), t('results.colGroupB'), t('results.colGroupC'), 'Pj', t('results.colQuality'), t('results.colLevel'), t('results.colExcel')];
 
   const sorted = [...orgs].sort((a, b) =>
     mode === 'score' ? b.totalScore - a.totalScore : a.pj - b.pj
@@ -144,23 +144,29 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
           <thead>
             <tr style={{ background: '#1a1e2e' }}>
-              {COLS.map((h, i) => (
-                <th
-                  key={h}
-                  style={{
-                    color: '#c9a84c',
-                    fontSize: '11px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    fontWeight: 600,
-                    padding: '13px 14px',
-                    textAlign: i <= 1 ? 'left' : i === 8 || i === 9 ? 'center' : 'right',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
+              {COLS.map((h, i) => {
+                const isGroup = i >= 3 && i <= 5;
+                return (
+                  <th
+                    key={h}
+                    style={{
+                      color: '#c9a84c',
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      fontWeight: 600,
+                      padding: '10px 14px',
+                      textAlign: i <= 1 ? 'left' : i === 8 || i === 9 ? 'center' : isGroup ? 'center' : 'right',
+                      whiteSpace: isGroup ? 'normal' : 'nowrap',
+                      width: isGroup ? '150px' : undefined,
+                      lineHeight: isGroup ? 1.3 : undefined,
+                      verticalAlign: 'middle',
+                    }}
+                  >
+                    {h}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -206,9 +212,9 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
                     {org.totalScore.toFixed(1)}
                   </td>
                   {/* Группы */}
-                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'monospace', color: '#4a3e2e' }}>{org.sumA.toFixed(1)}</td>
-                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'monospace', color: '#4a3e2e' }}>{org.sumB.toFixed(1)}</td>
-                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'monospace', color: '#4a3e2e' }}>{org.sumC.toFixed(1)}</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'center', fontFamily: 'monospace', color: '#4a3e2e' }}>{org.sumA.toFixed(1)}</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'center', fontFamily: 'monospace', color: '#4a3e2e' }}>{org.sumB.toFixed(1)}</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'center', fontFamily: 'monospace', color: '#4a3e2e' }}>{org.sumC.toFixed(1)}</td>
                   {/* Pj */}
                   <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'monospace', fontSize: '12px', color: '#9a8a70' }}>{org.pj.toFixed(3)}</td>
                   {/* Q как прогресс-бар */}
