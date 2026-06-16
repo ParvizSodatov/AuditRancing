@@ -3,18 +3,14 @@ import type {
   Weights, Thresholds, RankMode,
 } from '../types';
 import { DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS, RATING_LEVELS } from '../types';
-import { INDICATOR_GROUPS } from './indicatorOptions';
+import { MAX_TOTAL_SCORE } from './indicatorOptions';
 
 const GROUP_A_KEYS = ['k1','k2','k3','k4','k5','k6'] as const;
 const GROUP_B_KEYS = ['k7','k8','k9','k10','k11','k12','k13','k14','k15','k16','k17','k18','k19','k20','k21'] as const;
 const GROUP_C_KEYS = ['k22','k23','k24','k25'] as const;
 
-/** Максимально возможная сумма баллов — считается из шкал показателей (для режима «по сумме»). */
-export const MAX_TOTAL = INDICATOR_GROUPS.reduce(
-  (sum, g) => sum + g.indicators.reduce(
-    (s, ind) => s + Math.max(...ind.options.map(o => o.score)), 0),
-  0,
-);
+/** Максимально возможная сумма баллов — из шкал показателей (для режима «по сумме»). */
+export const MAX_TOTAL = MAX_TOTAL_SCORE;
 
 function sumKeys(scores: OrgKScores, keys: readonly string[]): number {
   return keys.reduce((s, k) => s + (scores[k as keyof OrgKScores] ?? 0), 0);

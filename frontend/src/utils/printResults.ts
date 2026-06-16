@@ -1,7 +1,5 @@
 import type { OrgWithRating, RankMode } from '../types';
-
-/** Колонки печатной таблицы — совпадают с экраном «Результаты». */
-const COLUMNS = ['#', 'Организация', 'Балл', 'ΣА', 'ΣБ', 'ΣВ', 'Pj', 'Качество (Q), %', 'Уровень'];
+import i18n from '../i18n';
 
 /** Экранирование текста, чтобы кавычки/угловые скобки в названии не ломали разметку. */
 function esc(s: string): string {
@@ -15,14 +13,19 @@ function esc(s: string): string {
  * Тёмный хедер и сайдбар приложения на бумагу не попадают.
  */
 export function printResults(orgs: OrgWithRating[], mode: RankMode) {
+  const t = i18n.t;
+  const lang = i18n.language === 'tg' ? 'tg' : 'ru';
+  const COLUMNS = [
+    t('print.colNum'), t('print.colName'), t('print.colScore'),
+    'ΣА', 'ΣБ', 'ΣВ', t('print.colPj'), t('print.colQuality'), t('print.colLevel'),
+  ];
+
   const sorted = [...orgs].sort((a, b) =>
     mode === 'score' ? b.totalScore - a.totalScore : a.pj - b.pj
   );
 
   const date = new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
-  const subtitle = mode === 'score'
-    ? 'Ранжирование по сумме баллов'
-    : 'Ранжирование по методике (Pj): меньший балл — выше надёжность';
+  const subtitle = mode === 'score' ? t('print.subScore') : t('print.subPj');
 
   const rows = sorted.map((org, i) => `
     <tr>
@@ -38,10 +41,10 @@ export function printResults(orgs: OrgWithRating[], mode: RankMode) {
     </tr>`).join('');
 
   const html = `<!DOCTYPE html>
-<html lang="ru">
+<html lang="${lang}">
 <head>
   <meta charset="utf-8" />
-  <title>Рейтинг аудиторских организаций</title>
+  <title>${esc(t('print.title'))}</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: Arial, "Segoe UI", sans-serif; color: #1a1a1a; margin: 28px; }
@@ -69,16 +72,16 @@ export function printResults(orgs: OrgWithRating[], mode: RankMode) {
   </style>
 </head>
 <body>
-  <h1>Рейтинг аудиторских организаций</h1>
+  <h1>${esc(t('print.title'))}</h1>
   <p class="sub">${esc(subtitle)}</p>
-  <p class="date">Сформировано: ${esc(date)} · организаций: ${sorted.length}</p>
+  <p class="date">${esc(t('print.generated', { date, count: sorted.length }))}</p>
   <table>
     <thead>
       <tr>${COLUMNS.map(c => `<th>${esc(c)}</th>`).join('')}</tr>
     </thead>
     <tbody>${rows}</tbody>
     <tfoot>
-      <tr><td colspan="${COLUMNS.length}">Система присвоения рейтингов надёжности и качества услуг · рабочее место рейтингового органа</td></tr>
+      <tr><td colspan="${COLUMNS.length}">${esc(t('print.footer'))}</td></tr>
     </tfoot>
   </table>
 </body>
@@ -86,7 +89,7 @@ export function printResults(orgs: OrgWithRating[], mode: RankMode) {
 
   const win = window.open('', '_blank', 'width=1000,height=700');
   if (!win) {
-    throw new Error('Браузер заблокировал всплывающее окно. Разрешите всплывающие окна для этого сайта.');
+    throw new Error(t('print.popupBlocked'));
   }
   win.document.open();
   win.document.write(html);

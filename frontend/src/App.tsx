@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AuditOrg, OrgWithRating, RankMode } from './types';
 import { DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS } from './types';
 import { computeRatings } from './utils/ratingCalculator';
@@ -14,6 +15,7 @@ import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import PasswordInput from './components/PasswordInput';
+import LanguageSwitcher from './components/LanguageSwitcher';
 
 /** Экран авторизации: обычный вход, восстановление или установка нового пароля по ссылке. */
 type AuthView = 'login' | 'forgot' | 'reset';
@@ -26,13 +28,14 @@ function readResetToken(): string {
 
 type Tab = 'orgs' | 'results' | 'charts';
 
-const NAV_TABS: { id: Tab; label: string }[] = [
-  { id: 'orgs', label: 'Организации' },
-  { id: 'results', label: 'Результаты' },
-  { id: 'charts', label: 'Аналитика' },
+const NAV_TABS: { id: Tab; labelKey: 'nav.orgs' | 'nav.results' | 'nav.charts' }[] = [
+  { id: 'orgs', labelKey: 'nav.orgs' },
+  { id: 'results', labelKey: 'nav.results' },
+  { id: 'charts', labelKey: 'nav.charts' },
 ];
 
 export default function App() {
+  const { t } = useTranslation();
   const toast = useToast();
   // Авторизация: user === null — показываем страницу входа.
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -64,10 +67,10 @@ export default function App() {
       setError(null);
       return list;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить данные с сервера');
+      setError(e instanceof Error ? e.message : t('errors.loadFailed'));
       return [];
     }
-  }, []);
+  }, [t]);
 
   // Проверка сохранённой сессии при запуске + реакция на разлогин (истёкший токен).
   useEffect(() => {
@@ -104,9 +107,9 @@ export default function App() {
       await api.updateOrg(org.id, { name: org.name, kScores: org.kScores });
       await reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить изменения');
+      setError(e instanceof Error ? e.message : t('errors.saveFailed'));
     }
-  }, [reload]);
+  }, [reload, t]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -114,9 +117,9 @@ export default function App() {
       const updated = await reload();
       setSelectedId(prev => prev === id ? (updated[0]?.id ?? null) : prev);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось удалить организацию');
+      setError(e instanceof Error ? e.message : t('errors.deleteFailed'));
     }
-  }, [reload]);
+  }, [reload, t]);
 
   const handleLogout = () => {
     api.logout();
@@ -140,7 +143,7 @@ export default function App() {
   if (!authChecked) {
     return (
       <div style={{ minHeight: '100vh', background: '#1a1e2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a7e6a', fontSize: '14px' }}>
-        Загрузка…
+        {t('common.loading')}
       </div>
     );
   }
@@ -172,19 +175,19 @@ export default function App() {
 
     // Проверки до обращения к серверу.
     if (!emailChanged && !wantPwChange) {
-      toast.error('Нет изменений');
+      toast.error(t('profile.noChanges'));
       return;
     }
     if (emailChanged && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
-      toast.error('Введите корректный адрес почты');
+      toast.error(t('profile.invalidEmail'));
       return;
     }
     if (wantPwChange) {
-      if (profNewPw.length < 6) { toast.error('Новый пароль должен быть не короче 6 символов'); return; }
-      if (profNewPw !== profConfirmPw) { toast.error('Пароли не совпадают'); return; }
+      if (profNewPw.length < 6) { toast.error(t('profile.pwTooShort')); return; }
+      if (profNewPw !== profConfirmPw) { toast.error(t('profile.pwMismatch')); return; }
     }
     if (!profCurrentPw) {
-      toast.error('Введите текущий пароль для подтверждения');
+      toast.error(t('profile.needCurrent'));
       return;
     }
 
@@ -199,9 +202,9 @@ export default function App() {
         await api.changePassword(profCurrentPw, profNewPw);
       }
       setProfileOpen(false);
-      toast.success('Профиль обновлён');
+      toast.success(t('profile.updated'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Не удалось сохранить профиль');
+      toast.error(e instanceof Error ? e.message : t('profile.saveFailed'));
     } finally {
       setProfBusy(false);
     }
@@ -210,7 +213,7 @@ export default function App() {
   const confirmAdd = async () => {
     const name = newName.trim();
     if (!name) {
-      toast.error('Введите название организации');
+      toast.error(t('editor.nameRequired'));
       return;
     }
     try {
@@ -219,10 +222,10 @@ export default function App() {
       setSelectedId(created.id);
       setActiveTab('orgs');
       setAddOpen(false);
-      toast.success(`Организация «${name}» добавлена`);
+      toast.success(t('addModal.created', { name }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось создать организацию');
-      toast.error('Не удалось создать организацию');
+      setError(e instanceof Error ? e.message : t('errors.createFailed'));
+      toast.error(t('errors.createFailed'));
     }
   };
 
@@ -233,14 +236,14 @@ export default function App() {
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
-              <img src="/gerb.png" alt="Герб Республики Таджикистан" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              <img src="/gerb.png" alt={t('header.coatAlt')} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
             <div>
               <div style={{ color: '#fff', fontWeight: 600, fontSize: '15px', lineHeight: 1 }}>
-               Министерство финансов Республики Таджикистан
+               {t('header.ministry')}
               </div>
               <div style={{ color: '#8a7e6a', fontSize: '11px', marginTop: '3px' }}>
-                Система присвоения рейтингов надёжности и качества услуг · рабочее место рейтингового органа
+                {t('header.subtitle')}
               </div>
             </div>
           </div>
@@ -263,15 +266,16 @@ export default function App() {
                     transition: 'color 0.15s',
                   }}
                 >
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </button>
               ))}
             </nav>
-            <span style={{ color: '#8a7e6a', fontSize: '13px' }}>{orgs.length} орг.</span>
+            <span style={{ color: '#8a7e6a', fontSize: '13px' }}>{t('header.orgCount', { count: orgs.length })}</span>
+            <LanguageSwitcher />
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '16px', borderLeft: '1px solid #2e3346' }}>
               <button
                 onClick={openProfile}
-                title="Профиль: сменить почту или пароль"
+                title={t('profile.buttonTitle')}
                 style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'transparent', border: '1px solid #3a4057', borderRadius: '6px', color: '#c9a84c', fontSize: '13px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', transition: 'color 0.15s, border-color 0.15s' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#c9a84c'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#3a4057'; }}
@@ -287,7 +291,7 @@ export default function App() {
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = '#c9a84c'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#8a7e6a'; (e.currentTarget as HTMLElement).style.borderColor = '#3a4057'; }}
               >
-                Выйти
+                {t('header.logout')}
               </button>
             </div>
           </div>
@@ -297,12 +301,12 @@ export default function App() {
       {/* ── Баннер ошибки соединения с API ── */}
       {error && (
         <div style={{ background: '#fbeeee', borderBottom: '1px solid #e8aeae', color: '#b03030', padding: '10px 24px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-          <span>⚠ {error}. Проверьте, что бэкенд запущен (npm run dev в папке backend).</span>
+          <span>⚠ {error}. {t('errors.apiHint')}</span>
           <button
             onClick={() => { setLoading(true); reload().finally(() => setLoading(false)); }}
             style={{ flexShrink: 0, border: '1px solid #e8aeae', background: '#fff', color: '#b03030', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
           >
-            Повторить
+            {t('common.retry')}
           </button>
         </div>
       )}
@@ -318,14 +322,14 @@ export default function App() {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#2a3047'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#1a1e2e'; }}
             >
-              + Добавить организацию
+              {t('sidebar.addOrg')}
             </button>
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {rated.length === 0 && (
               <p style={{ color: '#9a8a70', fontSize: '12px', textAlign: 'center', padding: '24px 16px' }}>
-                {loading ? 'Загрузка…' : 'Нет организаций. Нажмите «Добавить».'}
+                {loading ? t('common.loading') : t('sidebar.empty')}
               </p>
             )}
             {rated.map(org => (
@@ -365,7 +369,7 @@ export default function App() {
               ? <OrgEditor org={selected} onSave={handleSave} onDelete={handleDelete} />
               : (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '240px', color: '#9a8a70', fontSize: '14px' }}>
-                  Выберите организацию слева или добавьте новую.
+                  {t('main.noSelection')}
                 </div>
               )
           )}
@@ -384,14 +388,14 @@ export default function App() {
             onClick={e => e.stopPropagation()}
             style={{ background: '#faf7f0', borderRadius: '14px', border: '1px solid #d4c8ae', boxShadow: '0 12px 40px rgba(0,0,0,0.3)', width: '420px', maxWidth: '92vw', padding: '24px' }}
           >
-            <h2 style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: 700, color: '#2c2820' }}>Новая организация</h2>
-            <p style={{ margin: '0 0 16px', fontSize: '12.5px', color: '#9a8a70' }}>Введите название аудиторской организации.</p>
+            <h2 style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: 700, color: '#2c2820' }}>{t('addModal.title')}</h2>
+            <p style={{ margin: '0 0 16px', fontSize: '12.5px', color: '#9a8a70' }}>{t('addModal.subtitle')}</p>
             <input
               autoFocus
               value={newName}
               onChange={e => setNewName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') confirmAdd(); if (e.key === 'Escape') setAddOpen(false); }}
-              placeholder={`Организация ${orgs.length + 1}`}
+              placeholder={t('addModal.placeholder', { n: orgs.length + 1 })}
               style={{ width: '100%', boxSizing: 'border-box', fontSize: '14px', padding: '11px 13px', border: '1px solid #c8bcaa', borderRadius: '8px', background: '#fff', color: '#2c2820', outline: 'none', marginBottom: '18px' }}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
@@ -399,13 +403,13 @@ export default function App() {
                 onClick={() => setAddOpen(false)}
                 style={{ padding: '9px 18px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', border: '1px solid #d4c8ae', background: 'transparent', color: '#6a5e48', cursor: 'pointer' }}
               >
-                Отмена
+                {t('common.cancel')}
               </button>
               <button
                 onClick={confirmAdd}
                 style={{ padding: '9px 22px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', border: 'none', background: '#1a1e2e', color: '#fff', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
               >
-                Создать
+                {t('common.create')}
               </button>
             </div>
           </div>
@@ -422,11 +426,11 @@ export default function App() {
             onClick={e => e.stopPropagation()}
             style={{ background: '#faf7f0', borderRadius: '14px', border: '1px solid #d4c8ae', boxShadow: '0 12px 40px rgba(0,0,0,0.3)', width: '440px', maxWidth: '92vw', padding: '24px' }}
           >
-            <h2 style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: 700, color: '#2c2820' }}>Профиль</h2>
-            <p style={{ margin: '0 0 18px', fontSize: '12.5px', color: '#9a8a70' }}>Измените почту и/или пароль и подтвердите текущим паролем.</p>
+            <h2 style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: 700, color: '#2c2820' }}>{t('profile.title')}</h2>
+            <p style={{ margin: '0 0 18px', fontSize: '12.5px', color: '#9a8a70' }}>{t('profile.subtitle')}</p>
 
             {/* Почта */}
-            <label style={labelStyle}>Почта</label>
+            <label style={labelStyle}>{t('common.email')}</label>
             <input
               autoFocus
               type="email"
@@ -438,29 +442,29 @@ export default function App() {
             />
 
             {/* Новый пароль (необязательно) */}
-            <label style={{ ...labelStyle, marginTop: '16px' }}>Новый пароль</label>
+            <label style={{ ...labelStyle, marginTop: '16px' }}>{t('profile.newPw')}</label>
             <PasswordInput
               value={profNewPw}
               onChange={setProfNewPw}
-              placeholder="Оставьте пустым, чтобы не менять"
+              placeholder={t('profile.newPwPlaceholder')}
               autoComplete="new-password"
             />
             <PasswordInput
               value={profConfirmPw}
               onChange={setProfConfirmPw}
-              placeholder="Повторите новый пароль"
+              placeholder={t('profile.confirmPwPlaceholder')}
               autoComplete="new-password"
               style={{ marginTop: '10px' }}
             />
 
             {/* Подтверждение текущим паролем */}
             <div style={{ borderTop: '1px solid #e6ddca', margin: '18px 0 14px' }} />
-            <label style={labelStyle}>Текущий пароль <span style={{ color: '#b03030' }}>*</span></label>
+            <label style={labelStyle}>{t('profile.currentPw')} <span style={{ color: '#b03030' }}>*</span></label>
             <PasswordInput
               value={profCurrentPw}
               onChange={setProfCurrentPw}
               onKeyDown={e => { if (e.key === 'Enter') saveProfile(); if (e.key === 'Escape' && !profBusy) setProfileOpen(false); }}
-              placeholder="Подтвердите изменения паролем"
+              placeholder={t('profile.currentPwPlaceholder')}
               autoComplete="current-password"
             />
 
@@ -470,14 +474,14 @@ export default function App() {
                 disabled={profBusy}
                 style={{ padding: '9px 18px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', border: '1px solid #d4c8ae', background: 'transparent', color: '#6a5e48', cursor: profBusy ? 'default' : 'pointer' }}
               >
-                Отмена
+                {t('common.cancel')}
               </button>
               <button
                 onClick={saveProfile}
                 disabled={profBusy}
                 style={{ padding: '9px 22px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', border: 'none', background: profBusy ? '#3a4057' : '#1a1e2e', color: '#fff', cursor: profBusy ? 'default' : 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
               >
-                {profBusy ? 'Сохранение…' : 'Сохранить'}
+                {profBusy ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>

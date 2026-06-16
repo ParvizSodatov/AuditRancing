@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   value: string;
@@ -13,6 +14,7 @@ interface Props {
 
 /** Поле ввода пароля с кнопкой-«глазиком» для переключения видимости. */
 export default function PasswordInput({ value, onChange, placeholder, autoFocus, autoComplete, onKeyDown, style }: Props) {
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
 
   return (
@@ -31,8 +33,8 @@ export default function PasswordInput({ value, onChange, placeholder, autoFocus,
         type="button"
         onClick={() => setShow(s => !s)}
         tabIndex={-1}
-        aria-label={show ? 'Скрыть пароль' : 'Показать пароль'}
-        title={show ? 'Скрыть пароль' : 'Показать пароль'}
+        aria-label={show ? t('password.hide') : t('password.show')}
+        title={show ? t('password.hide') : t('password.show')}
         style={eyeBtnStyle}
         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#2c2820'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#9a8a70'; }}

@@ -1,5 +1,6 @@
 import type { AuditOrg, OrgKScores } from '../types';
 import { getToken, setToken, clearToken } from './auth';
+import i18n from '../i18n';
 
 /** Базовый адрес API. Меняется через VITE_API_URL при сборке. */
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
@@ -45,7 +46,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     if (!res.ok) {
       // Токен истёк/недействителен — разлогиниваем (UI вернёт на страницу входа).
       if (res.status === 401) clearToken();
-      let message = `Ошибка запроса (${res.status})`;
+      let message = i18n.t('errors.requestError', { status: res.status });
       try {
         const body = await res.json();
         if (body?.error) message = body.error;

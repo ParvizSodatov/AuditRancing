@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type AuthUser } from '../utils/api';
 import PasswordInput from '../components/PasswordInput';
 
@@ -11,6 +12,7 @@ interface Props {
 
 /** Страница входа: первое, что видит неавторизованный пользователь. */
 export default function LoginPage({ onLogin, onForgot }: Props) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export default function LoginPage({ onLogin, onForgot }: Props) {
       const user = await api.login(email.trim(), password);
       onLogin(user);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось войти');
+      setError(err instanceof Error ? err.message : t('login.failed'));
     } finally {
       setBusy(false);
     }
@@ -40,13 +42,13 @@ export default function LoginPage({ onLogin, onForgot }: Props) {
         {/* Логотип / заголовок */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
           <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px', overflow: 'hidden' }}>
-            <img src="/gerb.png" alt="Герб Республики Таджикистан" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <img src="/gerb.png" alt={t('header.coatAlt')} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#2c2820', textAlign: 'center' }}>
-         Министерство финансов Республики Таджикистан
+         {t('header.ministry')}
           </h1>
           <p style={{ margin: '6px 0 0', fontSize: '12.5px', color: '#9a8a70', textAlign: 'center' }}>
-            Вход в рабочее место рейтингового органа
+            {t('login.subtitle')}
           </p>
         </div>
 
@@ -57,7 +59,7 @@ export default function LoginPage({ onLogin, onForgot }: Props) {
         )}
 
         <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#6a5e48', marginBottom: '6px' }}>
-          Почта
+          {t('common.email')}
         </label>
         {/* type=text, а не email: чтобы браузер не блокировал вход старым учёткам
             с «непочтовым» логином (формат почты проверяется только при сбросе/смене). */}
@@ -73,12 +75,12 @@ export default function LoginPage({ onLogin, onForgot }: Props) {
         />
 
         <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#6a5e48', margin: '16px 0 6px' }}>
-          Пароль
+          {t('common.password')}
         </label>
         <PasswordInput
           value={password}
           onChange={setPassword}
-          placeholder="Введите пароль"
+          placeholder={t('login.pwPlaceholder')}
           autoComplete="current-password"
         />
 
@@ -88,7 +90,7 @@ export default function LoginPage({ onLogin, onForgot }: Props) {
             onClick={onForgot}
             style={{ background: 'none', border: 'none', padding: 0, color: '#9a7a2c', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
           >
-            Забыли пароль?
+            {t('login.forgot')}
           </button>
         </div>
 
@@ -97,7 +99,7 @@ export default function LoginPage({ onLogin, onForgot }: Props) {
           disabled={busy}
           style={{ width: '100%', marginTop: '18px', background: busy ? '#3a4057' : '#1a1e2e', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', fontWeight: 600, cursor: busy ? 'default' : 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'background 0.15s' }}
         >
-          {busy ? 'Вход…' : 'Войти'}
+          {busy ? t('login.signingIn') : t('login.signIn')}
         </button>
       </form>
     </div>

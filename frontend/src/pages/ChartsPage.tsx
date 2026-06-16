@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { OrgWithRating, RatingLevel } from '../types';
 import { RATING_LEVELS } from '../types';
 import { MAX_TOTAL } from '../utils/ratingCalculator';
@@ -8,10 +9,10 @@ interface Props {
 }
 
 const GROUP_COLORS = { a: '#c9a84c', b: '#5a7a9a', c: '#7a9a5a' };
-const GROUP_META: { key: 'a' | 'b' | 'c'; label: string; field: 'sumA' | 'sumB' | 'sumC' }[] = [
-  { key: 'a', label: 'А · Экономика', field: 'sumA' },
-  { key: 'b', label: 'Б · Профессионализм', field: 'sumB' },
-  { key: 'c', label: 'В · Репутация', field: 'sumC' },
+const GROUP_META: { key: 'a' | 'b' | 'c'; labelKey: 'charts.groupA' | 'charts.groupB' | 'charts.groupC'; field: 'sumA' | 'sumB' | 'sumC' }[] = [
+  { key: 'a', labelKey: 'charts.groupA', field: 'sumA' },
+  { key: 'b', labelKey: 'charts.groupB', field: 'sumB' },
+  { key: 'c', labelKey: 'charts.groupC', field: 'sumC' },
 ];
 
 const card: React.CSSProperties = {
@@ -31,10 +32,11 @@ const cardTitle: React.CSSProperties = {
 };
 
 export default function ChartsPage({ orgs }: Props) {
+  const { t } = useTranslation();
   if (orgs.length === 0) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '240px', color: '#9a8a70', fontSize: '14px' }}>
-        Нет данных. Добавьте организации во вкладке «Организации».
+        {t('charts.empty')}
       </div>
     );
   }
@@ -52,10 +54,10 @@ export default function ChartsPage({ orgs }: Props) {
   const maxLevelCount = Math.max(...levelCounts.map(d => d.count), 1);
 
   const stats = [
-    { label: 'ОРГАНИЗАЦИЙ', value: String(orgs.length) },
-    { label: 'СРЕДНИЙ БАЛЛ', value: avgTotal.toFixed(1) },
-    { label: 'СРЕДНИЙ Q', value: `${avgQ.toFixed(0)}%` },
-    { label: 'ЛИДЕР', value: leader.name, badge: leader.level },
+    { label: t('charts.orgs').toUpperCase(), value: String(orgs.length) },
+    { label: t('charts.avgScore').toUpperCase(), value: avgTotal.toFixed(1) },
+    { label: t('charts.avgQ').toUpperCase(), value: `${avgQ.toFixed(0)}%` },
+    { label: t('charts.leader').toUpperCase(), value: leader.name, badge: leader.level },
   ];
 
   return (
@@ -78,7 +80,7 @@ export default function ChartsPage({ orgs }: Props) {
 
       {/* ── Распределение по уровням ── */}
       <div style={card}>
-        <h3 style={cardTitle}>Распределение по уровням рейтинга</h3>
+        <h3 style={cardTitle}>{t('charts.distribution')}</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {levelCounts.map(({ lvl, count }) => (
             <div key={lvl} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -107,13 +109,13 @@ export default function ChartsPage({ orgs }: Props) {
 
       {/* ── Структура баллов по группам ── */}
       <div style={card}>
-        <h3 style={cardTitle}>Структура баллов по группам показателей</h3>
+        <h3 style={cardTitle}>{t('charts.structure')}</h3>
         {/* Легенда */}
         <div style={{ display: 'flex', gap: '18px', marginBottom: '16px', flexWrap: 'wrap' }}>
           {GROUP_META.map(g => (
             <div key={g.key} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: '#4a3e2e' }}>
               <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: GROUP_COLORS[g.key] }} />
-              {g.label}
+              {t(g.labelKey)}
             </div>
           ))}
         </div>
@@ -132,7 +134,7 @@ export default function ChartsPage({ orgs }: Props) {
                   return val > 0 ? (
                     <div
                       key={g.key}
-                      title={`${g.label}: ${val.toFixed(1)}`}
+                      title={`${t(g.labelKey)}: ${val.toFixed(1)}`}
                       style={{
                         width: `${(val / org.totalScore) * 100}%`,
                         background: GROUP_COLORS[g.key],
@@ -149,7 +151,7 @@ export default function ChartsPage({ orgs }: Props) {
 
       {/* ── Качество Q ── */}
       <div style={card}>
-        <h3 style={cardTitle}>Качество и надёжность (Q, % от {MAX_TOTAL} б.)</h3>
+        <h3 style={cardTitle}>{t('charts.quality', { max: MAX_TOTAL })}</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {byTotal.map((org, i) => (
             <div key={org.id} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

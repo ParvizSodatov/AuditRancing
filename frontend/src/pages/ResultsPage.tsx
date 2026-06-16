@@ -1,4 +1,5 @@
 import { Download, Printer } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { OrgWithRating, RankMode } from '../types';
 import { MAX_TOTAL } from '../utils/ratingCalculator';
 import { LEVEL_STYLES } from '../components/RatingBadge';
@@ -13,10 +14,12 @@ interface Props {
   onMode: (mode: RankMode) => void;
 }
 
-const COLS = ['#', 'Организация', 'Балл', 'ΣА', 'ΣБ', 'ΣВ', 'Pj', 'Качество (Q)', 'Уровень', 'Excel'];
-
 export default function ResultsPage({ orgs, mode, onMode }: Props) {
+  const { t } = useTranslation();
   const toast = useToast();
+
+  const COLS = ['#', t('results.colName'), t('results.colScore'), 'ΣА', 'ΣБ', 'ΣВ', 'Pj', t('results.colQuality'), t('results.colLevel'), t('results.colExcel')];
+
   const sorted = [...orgs].sort((a, b) =>
     mode === 'score' ? b.totalScore - a.totalScore : a.pj - b.pj
   );
@@ -24,20 +27,20 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
   const handleExport = async () => {
     try {
       await exportResultsToExcel(orgs, mode);
-      toast.success('Файл Excel сформирован');
+      toast.success(t('results.excelDone'));
     } catch (e) {
       console.error('Ошибка экспорта в Excel:', e);
-      toast.error(e instanceof Error ? `Ошибка экспорта: ${e.message}` : 'Не удалось сформировать файл');
+      toast.error(e instanceof Error ? t('results.exportError', { message: e.message }) : t('results.exportFailed'));
     }
   };
 
   const handleExportOrg = async (org: OrgWithRating) => {
     try {
       await exportOrgToExcel(org);
-      toast.success(`Файл «${org.name}» сформирован`);
+      toast.success(t('results.orgFileDone', { name: org.name }));
     } catch (e) {
       console.error('Ошибка экспорта организации:', e);
-      toast.error(e instanceof Error ? `Ошибка экспорта: ${e.message}` : 'Не удалось сформировать файл');
+      toast.error(e instanceof Error ? t('results.exportError', { message: e.message }) : t('results.exportFailed'));
     }
   };
 
@@ -46,7 +49,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
       printResults(orgs, mode);
     } catch (e) {
       console.error('Ошибка печати:', e);
-      toast.error(e instanceof Error ? e.message : 'Не удалось открыть окно печати');
+      toast.error(e instanceof Error ? e.message : t('results.printFailed'));
     }
   };
 
@@ -54,7 +57,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
     <div style={{ padding: '24px 28px' }}>
       {/* ── Сегментированный переключатель режима ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '10px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '13px', color: '#7a6f5e', fontWeight: 500 }}>Ранжирование:</span>
+        <span style={{ fontSize: '13px', color: '#7a6f5e', fontWeight: 500 }}>{t('results.ranking')}</span>
         <div style={{ display: 'inline-flex', background: '#e3dcc8', padding: '3px', borderRadius: '9px', border: '1px solid #d4c8ae' }}>
           {(['score', 'pj'] as RankMode[]).map(m => (
             <button
@@ -73,7 +76,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
                 boxShadow: mode === m ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
               }}
             >
-              {m === 'score' ? 'По сумме баллов' : 'По методике (Pj)'}
+              {m === 'score' ? t('results.byScore') : t('results.byPj')}
             </button>
           ))}
         </div>
@@ -82,7 +85,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
         <button
           onClick={handlePrint}
           disabled={orgs.length === 0}
-          title={orgs.length === 0 ? 'Нет данных для печати' : 'Открыть окно печати'}
+          title={orgs.length === 0 ? t('results.printDisabled') : t('results.printTitle')}
           style={{
             marginLeft: 'auto',
             display: 'inline-flex',
@@ -101,14 +104,14 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
           }}
         >
           <Printer size={15} />
-          Печать
+          {t('results.print')}
         </button>
 
         {/* ── Экспорт в Excel ── */}
         <button
           onClick={() => { void handleExport(); }}
           disabled={orgs.length === 0}
-          title={orgs.length === 0 ? 'Нет данных для экспорта' : 'Скачать таблицу в формате .xlsx'}
+          title={orgs.length === 0 ? t('results.exportDisabled') : t('results.exportTitle')}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -126,14 +129,14 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
           }}
         >
           <Download size={15} />
-          Экспорт в Excel
+          {t('results.exportExcel')}
         </button>
       </div>
 
       <p style={{ fontSize: '12px', color: '#9a8a70', marginBottom: '18px' }}>
         {mode === 'score'
-          ? `Простой режим: выше итоговый балл — выше место. Q = доля от максимума (${MAX_TOTAL} б.).`
-          : 'Методика Pj: меньший балл = выше надёжность и качество услуг. Q = (1 − Pj/max).'}
+          ? t('results.descScore', { max: MAX_TOTAL })
+          : t('results.descPj')}
       </p>
 
       {/* ── Таблица ── */}
@@ -164,7 +167,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
             {sorted.length === 0 && (
               <tr>
                 <td colSpan={10} style={{ padding: '48px', textAlign: 'center', color: '#9a8a70' }}>
-                  Нет организаций для отображения
+                  {t('results.empty')}
                 </td>
               </tr>
             )}
@@ -227,7 +230,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
                   <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                     <button
                       onClick={() => { void handleExportOrg(org); }}
-                      title={`Скачать Excel «${org.name}»`}
+                      title={t('results.downloadOrg', { name: org.name })}
                       style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                         width: '34px', height: '34px', borderRadius: '8px',
@@ -248,7 +251,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
       </div>
 
       <p style={{ textAlign: 'center', fontSize: '11.5px', color: '#b0a28a', marginTop: '20px' }}>
-        Прототип · расчёт по методике инструкции · ранжирование: меньший Pj = выше надёжность
+        {t('results.footer')}
       </p>
     </div>
   );

@@ -1,18 +1,21 @@
 import type { OrgWithRating, OrgKScores, RankMode } from '../types';
-import { INDICATOR_GROUPS } from './indicatorOptions';
+import { getIndicatorGroups } from './indicatorOptions';
+import i18n from '../i18n';
 
 /** Колонки листа — порядок и ширина совпадают с таблицей результатов. */
-const COLUMNS: { header: string; width: number }[] = [
-  { header: '#', width: 5 },
-  { header: 'Организация', width: 38 },
-  { header: 'Балл', width: 9 },
-  { header: 'ΣА', width: 9 },
-  { header: 'ΣБ', width: 9 },
-  { header: 'ΣВ', width: 9 },
-  { header: 'Pj', width: 10 },
-  { header: 'Качество (Q), %', width: 16 },
-  { header: 'Уровень', width: 10 },
-];
+function ratingColumns(): { header: string; width: number }[] {
+  return [
+    { header: i18n.t('exportXlsx.colNum'), width: 5 },
+    { header: i18n.t('exportXlsx.colName'), width: 38 },
+    { header: i18n.t('exportXlsx.colScore'), width: 9 },
+    { header: 'ΣА', width: 9 },
+    { header: 'ΣБ', width: 9 },
+    { header: 'ΣВ', width: 9 },
+    { header: i18n.t('exportXlsx.colPj'), width: 10 },
+    { header: i18n.t('exportXlsx.colQuality'), width: 16 },
+    { header: i18n.t('exportXlsx.colLevel'), width: 10 },
+  ];
+}
 
 /**
  * Выгружает отранжированный список организаций в файл .xlsx
@@ -23,10 +26,12 @@ export async function exportResultsToExcel(orgs: OrgWithRating[], mode: RankMode
     mode === 'score' ? b.totalScore - a.totalScore : a.pj - b.pj
   );
 
+  const COLUMNS = ratingColumns();
+
   // Подгружаем тяжёлую библиотеку только при экспорте — не утяжеляем стартовый бандл.
   const { default: ExcelJS } = await import('exceljs');
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Рейтинг');
+  const ws = wb.addWorksheet(i18n.t('exportXlsx.sheetRating'));
 
   ws.columns = COLUMNS.map(c => ({ width: c.width }));
 
@@ -85,7 +90,7 @@ export async function exportResultsToExcel(orgs: OrgWithRating[], mode: RankMode
   const a = document.createElement('a');
   const date = new Date().toISOString().slice(0, 10);
   a.href = url;
-  a.download = `Рейтинг_аудиторских_организаций_${date}.xlsx`;
+  a.download = `${i18n.t('exportXlsx.fileRating')}_${date}.xlsx`;
   // Ссылку нужно добавить в DOM, иначе часть браузеров не запускает скачивание.
   document.body.appendChild(a);
   a.click();
@@ -111,17 +116,19 @@ function downloadXlsx(buf: ArrayBuffer, fileName: string) {
 
 /** Безопасное имя файла: убираем символы, недопустимые в именах файлов. */
 function safeFileName(name: string): string {
-  return name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'организация';
+  return name.replace(/[\\/:*?"<>|]/g, '_').trim() || i18n.t('exportXlsx.fallbackName');
 }
 
 /** Колонки детального листа одной организации. */
-const DETAIL_COLUMNS: { header: string; width: number }[] = [
-  { header: 'Группа', width: 12 },
-  { header: 'Код', width: 8 },
-  { header: 'Показатель', width: 46 },
-  { header: 'Выбранный вариант', width: 40 },
-  { header: 'Балл', width: 9 },
-];
+function detailColumns(): { header: string; width: number }[] {
+  return [
+    { header: i18n.t('exportXlsx.colGroup'), width: 12 },
+    { header: i18n.t('exportXlsx.colCode'), width: 8 },
+    { header: i18n.t('exportXlsx.colIndicator'), width: 46 },
+    { header: i18n.t('exportXlsx.colChosen'), width: 40 },
+    { header: i18n.t('exportXlsx.colScore'), width: 9 },
+  ];
+}
 
 /**
  * Выгружает одну организацию в .xlsx со всеми 25 показателями,
@@ -131,8 +138,9 @@ const DETAIL_COLUMNS: { header: string; width: number }[] = [
 export async function exportOrgToExcel(org: OrgWithRating) {
   const { default: ExcelJS } = await import('exceljs');
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Организация');
+  const ws = wb.addWorksheet(i18n.t('exportXlsx.sheetOrg'));
 
+  const DETAIL_COLUMNS = detailColumns();
   ws.columns = DETAIL_COLUMNS.map(c => ({ width: c.width }));
 
   // ── Заголовок-«шапка» с названием организации и сводкой ──
@@ -145,11 +153,11 @@ export async function exportOrgToExcel(org: OrgWithRating) {
   titleCell.alignment = { vertical: 'middle', horizontal: 'left' };
 
   const summaryRow = ws.addRow([
-    `Итоговый балл: ${org.totalScore.toFixed(1)}`,
+    i18n.t('exportXlsx.summaryTotal', { value: org.totalScore.toFixed(1) }),
     '',
-    `ΣА: ${org.sumA.toFixed(1)}  ΣБ: ${org.sumB.toFixed(1)}  ΣВ: ${org.sumC.toFixed(1)}`,
-    `Pj: ${org.pj.toFixed(3)}  Q: ${org.q.toFixed(0)}%`,
-    `Уровень: ${org.level}`,
+    i18n.t('exportXlsx.summaryGroups', { a: org.sumA.toFixed(1), b: org.sumB.toFixed(1), c: org.sumC.toFixed(1) }),
+    i18n.t('exportXlsx.summaryPjQ', { pj: org.pj.toFixed(3), q: org.q.toFixed(0) }),
+    i18n.t('exportXlsx.summaryLevel', { level: org.level }),
   ]);
   summaryRow.height = 20;
   summaryRow.eachCell(cell => {
@@ -177,7 +185,7 @@ export async function exportOrgToExcel(org: OrgWithRating) {
 
   // ── Строки по всем 25 показателям ──
   let rowIndex = 0;
-  INDICATOR_GROUPS.forEach(group => {
+  getIndicatorGroups(i18n.t).forEach(group => {
     group.indicators.forEach(ind => {
       const score = org.kScores[ind.key as keyof OrgKScores];
       // Подбираем выбранный вариант по баллу (как в редакторе организации).
@@ -186,7 +194,7 @@ export async function exportOrgToExcel(org: OrgWithRating) {
         group.id,
         ind.code,
         ind.name,
-        chosen ? chosen.label : '— не задано —',
+        chosen ? chosen.label : i18n.t('exportXlsx.notSet'),
         Number(score),
       ]);
 

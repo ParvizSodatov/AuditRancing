@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../utils/api';
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 
 /** Экран запроса ссылки для сброса пароля по почте. */
 export default function ForgotPasswordPage({ onBack }: Props) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -23,7 +25,7 @@ export default function ForgotPasswordPage({ onBack }: Props) {
       // Ответ всегда успешный — не раскрываем, есть ли такая почта.
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось отправить письмо');
+      setError(err instanceof Error ? err.message : t('forgot.failed'));
     } finally {
       setBusy(false);
     }
@@ -34,26 +36,26 @@ export default function ForgotPasswordPage({ onBack }: Props) {
       <form onSubmit={submit} style={cardStyle}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
           <div style={logoStyle}>
-            <img src="/gerb.png" alt="Герб Республики Таджикистан" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <img src="/gerb.png" alt={t('header.coatAlt')} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#2c2820', textAlign: 'center' }}>
-            Восстановление пароля
+            {t('forgot.title')}
           </h1>
           <p style={{ margin: '6px 0 0', fontSize: '12.5px', color: '#9a8a70', textAlign: 'center' }}>
-            Введите почту — пришлём ссылку для сброса пароля
+            {t('forgot.subtitle')}
           </p>
         </div>
 
         {sent ? (
           <div style={{ background: '#eef7ee', border: '1px solid #aed8ae', color: '#2f7a2f', borderRadius: '8px', padding: '12px 14px', fontSize: '13px', marginBottom: '18px' }}>
-            ✓ Если такая почта зарегистрирована, мы отправили на неё письмо со ссылкой для сброса пароля. Проверьте входящие и папку «Спам».
+            {t('forgot.sent')}
           </div>
         ) : (
           <>
             {error && (
               <div style={errorStyle}>⚠ {error}</div>
             )}
-            <label style={labelStyle}>Почта</label>
+            <label style={labelStyle}>{t('common.email')}</label>
             <input
               autoFocus
               type="email"
@@ -64,14 +66,14 @@ export default function ForgotPasswordPage({ onBack }: Props) {
               style={inputStyle}
             />
             <button type="submit" disabled={busy} style={primaryBtn(busy)}>
-              {busy ? 'Отправка…' : 'Отправить ссылку'}
+              {busy ? t('forgot.sending') : t('forgot.send')}
             </button>
           </>
         )}
 
         <div style={{ textAlign: 'center', marginTop: '18px' }}>
           <button type="button" onClick={onBack} style={linkBtn}>
-            ← Вернуться ко входу
+            {t('forgot.back')}
           </button>
         </div>
       </form>

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AuditOrg, OrgWithRating, OrgKScores } from '../types';
-import { INDICATOR_GROUPS } from '../utils/indicatorOptions';
+import { getIndicatorGroups, ALL_INDICATOR_KEYS } from '../utils/indicatorOptions';
 import { useToast } from '../components/Toast';
 import RatingBadge from '../components/RatingBadge';
-
-// Все 25 ключей показателей — для проверки, что каждый выбран (значение > 0).
-const ALL_INDICATORS = INDICATOR_GROUPS.flatMap(g => g.indicators);
 
 interface Props {
   org: OrgWithRating;
@@ -14,7 +12,10 @@ interface Props {
 }
 
 export default function OrgEditor({ org, onSave, onDelete }: Props) {
+  const { t } = useTranslation();
   const toast = useToast();
+  // Группы показателей с подписями на текущем языке.
+  const indicatorGroups = getIndicatorGroups(t);
   const [name, setName] = useState(org.name);
   const [kScores, setKScores] = useState<OrgKScores>(org.kScores);
   const [saved, setSaved] = useState(false);
@@ -35,25 +36,24 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
   };
 
   // Ключи показателей, которые ещё не выбраны (остались на «не задано» = 0).
-  const missingKeys = ALL_INDICATORS
-    .filter(ind => !(kScores[ind.key as keyof OrgKScores] > 0))
-    .map(ind => ind.key);
+  const missingKeys = ALL_INDICATOR_KEYS.filter(key => !(kScores[key] > 0));
+  const totalIndicators = ALL_INDICATOR_KEYS.length;
 
   const handleSave = () => {
     if (!name.trim()) {
       setShowErrors(true);
-      toast.error('Введите название организации');
+      toast.error(t('editor.nameRequired'));
       return;
     }
     if (missingKeys.length > 0) {
       setShowErrors(true);
-      toast.error(`Заполните все показатели: осталось ${missingKeys.length} из ${ALL_INDICATORS.length}`);
+      toast.error(t('editor.fillAll', { left: missingKeys.length, total: totalIndicators }));
       return;
     }
     onSave({ id: org.id, name: name.trim(), createdAt: org.createdAt, kScores });
     setShowErrors(false);
     setSaved(true);
-    toast.success('Запись сохранена');
+    toast.success(t('editor.recordSaved'));
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -63,16 +63,16 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
   const handleRename = () => {
     if (!nameChanged) return;
     onSave({ id: org.id, name: name.trim(), createdAt: org.createdAt, kScores });
-    toast.success('Название организации изменено');
+    toast.success(t('editor.renamed'));
   };
 
   const handleDelete = () => {
-    if (!confirm(`Удалить «${name}»?`)) return;
+    if (!confirm(t('editor.confirmDelete', { name }))) return;
     onDelete(org.id);
   };
 
   const stats = [
-    { label: 'ИТОГОВЫЙ БАЛЛ', value: org.totalScore.toFixed(1) },
+    { label: t('editor.totalScore').toUpperCase(), value: org.totalScore.toFixed(1) },
     { label: 'ΣА', value: org.sumA.toFixed(1) },
     { label: 'ΣБ', value: org.sumB.toFixed(1) },
     { label: 'ΣВ', value: org.sumC.toFixed(1) },
@@ -101,7 +101,7 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
             marginRight: '16px',
             padding: '4px 8px',
           }}
-          placeholder="Название организации"
+          placeholder={t('editor.namePlaceholder')}
         />
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           {nameChanged && (
@@ -111,7 +111,7 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#b8973f'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#c9a84c'; }}
             >
-              Изменить
+              {t('common.change')}
             </button>
           )}
           <button
@@ -120,7 +120,7 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#b03030'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fbeeee'; (e.currentTarget as HTMLElement).style.color = '#b03030'; }}
           >
-            Удалить
+            {t('common.delete')}
           </button>
         </div>
       </div>
@@ -139,7 +139,7 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
         ))}
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
           <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9a8a70' }}>
-            УРОВЕНЬ
+            {t('editor.level')}
           </span>
           <div style={{ marginTop: '4px' }}>
             <RatingBadge level={org.level} size="lg" />
@@ -149,7 +149,7 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
 
       {/* ── Indicator groups ── */}
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '24px' }}>
-        {INDICATOR_GROUPS.map(group => (
+        {indicatorGroups.map(group => (
           <div key={group.id}>
 
             {/* Group header */}
@@ -188,8 +188,8 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
                   style={{
                     width: '280px',
                     flexShrink: 0,
-                    background: showErrors && missingKeys.includes(ind.key) ? '#fbeeee' : '#faf7f0',
-                    border: showErrors && missingKeys.includes(ind.key) ? '1px solid #d98a8a' : '1px solid #c8bcaa',
+                    background: showErrors && missingKeys.includes(ind.key as keyof OrgKScores) ? '#fbeeee' : '#faf7f0',
+                    border: showErrors && missingKeys.includes(ind.key as keyof OrgKScores) ? '1px solid #d98a8a' : '1px solid #c8bcaa',
                     borderRadius: '5px',
                     padding: '8px 12px',
                     fontSize: '13px',
@@ -213,7 +213,7 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
         <div style={{ padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '16px' }}>
           {missingKeys.length > 0 && (
             <span style={{ fontSize: '12.5px', color: '#b07a30', fontWeight: 500 }}>
-              Заполнено {ALL_INDICATORS.length - missingKeys.length} из {ALL_INDICATORS.length} показателей
+              {t('editor.filledCount', { done: totalIndicators - missingKeys.length, total: totalIndicators })}
             </span>
           )}
           <button
@@ -234,7 +234,7 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
             onMouseEnter={e => { if (!saved) (e.currentTarget as HTMLElement).style.background = '#2a3047'; }}
             onMouseLeave={e => { if (!saved) (e.currentTarget as HTMLElement).style.background = '#1a1e2e'; }}
           >
-            {saved ? '✓ Сохранено' : 'Сохранить запись'}
+            {saved ? t('editor.saved') : t('editor.saveRecord')}
           </button>
         </div>
       </div>

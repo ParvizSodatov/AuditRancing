@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../utils/api';
 import PasswordInput from '../components/PasswordInput';
 
@@ -11,6 +12,7 @@ interface Props {
 
 /** Экран установки нового пароля по ссылке из письма. */
 export default function ResetPasswordPage({ token, onDone }: Props) {
+  const { t } = useTranslation();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -23,11 +25,11 @@ export default function ResetPasswordPage({ token, onDone }: Props) {
     setError(null);
 
     if (password.length < 6) {
-      setError('Новый пароль должен быть не короче 6 символов');
+      setError(t('profile.pwTooShort'));
       return;
     }
     if (password !== confirm) {
-      setError('Пароли не совпадают');
+      setError(t('profile.pwMismatch'));
       return;
     }
 
@@ -36,7 +38,7 @@ export default function ResetPasswordPage({ token, onDone }: Props) {
       await api.resetPassword(token, password);
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось сменить пароль');
+      setError(err instanceof Error ? err.message : t('reset.failed'));
     } finally {
       setBusy(false);
     }
@@ -47,51 +49,51 @@ export default function ResetPasswordPage({ token, onDone }: Props) {
       <form onSubmit={submit} style={cardStyle}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
           <div style={logoStyle}>
-            <img src="/gerb.png" alt="Герб Республики Таджикистан" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <img src="/gerb.png" alt={t('header.coatAlt')} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#2c2820', textAlign: 'center' }}>
-            Новый пароль
+            {t('reset.title')}
           </h1>
           <p style={{ margin: '6px 0 0', fontSize: '12.5px', color: '#9a8a70', textAlign: 'center' }}>
-            Придумайте новый пароль для входа
+            {t('reset.subtitle')}
           </p>
         </div>
 
         {done ? (
           <>
             <div style={{ background: '#eef7ee', border: '1px solid #aed8ae', color: '#2f7a2f', borderRadius: '8px', padding: '12px 14px', fontSize: '13px', marginBottom: '18px' }}>
-              ✓ Пароль изменён. Теперь войдите с новым паролем.
+              {t('reset.done')}
             </div>
             <button type="button" onClick={onDone} style={primaryBtn(false)}>
-              Перейти ко входу
+              {t('reset.goLogin')}
             </button>
           </>
         ) : (
           <>
             {error && <div style={errorStyle}>⚠ {error}</div>}
 
-            <label style={labelStyle}>Новый пароль</label>
+            <label style={labelStyle}>{t('profile.newPw')}</label>
             <PasswordInput
               value={password}
               onChange={setPassword}
-              placeholder="Минимум 6 символов"
+              placeholder={t('reset.minChars')}
               autoComplete="new-password"
             />
 
-            <label style={{ ...labelStyle, marginTop: '16px' }}>Повторите пароль</label>
+            <label style={{ ...labelStyle, marginTop: '16px' }}>{t('reset.repeat')}</label>
             <PasswordInput
               value={confirm}
               onChange={setConfirm}
-              placeholder="Повторите новый пароль"
+              placeholder={t('profile.confirmPwPlaceholder')}
               autoComplete="new-password"
             />
 
             <button type="submit" disabled={busy} style={primaryBtn(busy)}>
-              {busy ? 'Сохранение…' : 'Сохранить пароль'}
+              {busy ? t('common.saving') : t('reset.save')}
             </button>
             <div style={{ textAlign: 'center', marginTop: '18px' }}>
               <button type="button" onClick={onDone} style={linkBtn}>
-                ← Вернуться ко входу
+                {t('forgot.back')}
               </button>
             </div>
           </>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { onLoadingChange } from '../utils/api';
 
 /**
@@ -7,6 +8,7 @@ import { onLoadingChange } from '../utils/api';
  * настройка в компонентах не нужна.
  */
 export default function GlobalLoader() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => onLoadingChange(setLoading), []);
@@ -74,7 +76,7 @@ export default function GlobalLoader() {
           }}
         />
         <span style={{ color: '#e8dfc8', fontSize: '12.5px', fontWeight: 600, letterSpacing: '0.2px' }}>
-          Загрузка…
+          {t('common.loading')}
         </span>
       </div>
 
