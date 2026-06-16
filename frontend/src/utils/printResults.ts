@@ -17,7 +17,7 @@ export function printResults(orgs: OrgWithRating[], mode: RankMode) {
   const lang = i18n.language === 'tg' ? 'tg' : 'ru';
   const COLUMNS = [
     t('print.colNum'), t('print.colName'), t('print.colScore'),
-    'ΣА', 'ΣБ', 'ΣВ', t('print.colPj'), t('print.colQuality'), t('print.colLevel'),
+    t('results.colGroupA'), t('results.colGroupB'), t('results.colGroupC'), t('print.colPj'), t('print.colQuality'), t('print.colLevel'),
   ];
 
   const sorted = [...orgs].sort((a, b) =>

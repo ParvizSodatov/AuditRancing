@@ -8,10 +8,10 @@ function ratingColumns(): { header: string; width: number }[] {
     { header: i18n.t('exportXlsx.colNum'), width: 5 },
     { header: i18n.t('exportXlsx.colName'), width: 38 },
     { header: i18n.t('exportXlsx.colScore'), width: 9 },
-    { header: 'ΣА', width: 9 },
-    { header: 'ΣБ', width: 9 },
-    { header: 'ΣВ', width: 9 },
-    { header: i18n.t('exportXlsx.colPj'), width: 10 },
+    { header: i18n.t('results.colGroupA'), width: 22 },
+    { header: i18n.t('results.colGroupB'), width: 22 },
+    { header: i18n.t('results.colGroupC'), width: 22 },
+    { header: i18n.t('exportXlsx.colPj'), width: 12 },
     { header: i18n.t('exportXlsx.colQuality'), width: 16 },
     { header: i18n.t('exportXlsx.colLevel'), width: 10 },
   ];
@@ -37,11 +37,11 @@ export async function exportResultsToExcel(orgs: OrgWithRating[], mode: RankMode
 
   // ── Строка-заголовок: жирный текст, тёмный фон, золотой цвет ──
   const header = ws.addRow(COLUMNS.map(c => c.header));
-  header.height = 22;
+  header.height = 52;
   header.eachCell(cell => {
     cell.font = { bold: true, color: { argb: 'FFC9A84C' }, size: 11 };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A1E2E' } };
-    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     cell.border = {
       top: { style: 'thin', color: { argb: 'FFD4C8AE' } },
       bottom: { style: 'thin', color: { argb: 'FFD4C8AE' } },
