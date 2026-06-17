@@ -66,10 +66,27 @@ export default function ChartsPage({ orgs }: Props) {
     .filter(d => d.count > 0);
   const maxLevelCount = Math.max(...levelCounts.map(d => d.count), 1);
 
-  // Шкала для столбчатой диаграммы по группам (А/Б/В).
-  const groupMax = Math.max(...orgs.flatMap(o => [o.sumA, o.sumB, o.sumC]), 1);
+  // Агрегация баллов по годам для столбчатой диаграммы (в каждом году — А/Б/В).
+  const yearMap = new Map<number, { a: number; b: number; c: number }>();
+  for (const o of orgs) {
+    const y = new Date(o.createdAt).getFullYear();
+    if (Number.isNaN(y)) continue;
+    const e = yearMap.get(y) ?? { a: 0, b: 0, c: 0 };
+    e.a += o.sumA; e.b += o.sumB; e.c += o.sumC;
+    yearMap.set(y, e);
+  }
+  const yearData = [...yearMap.entries()].sort((a, b) => a[0] - b[0]).map(([year, v]) => ({ year, ...v }));
+  const groupMax = Math.max(...yearData.flatMap(d => [d.a, d.b, d.c]), 1);
   const axis = buildAxis(groupMax);
   const PLOT_H = 240;
+
+  // Итого по каждой группе (по всем годам) — для боковой сводки.
+  const groupTotals = {
+    a: orgs.reduce((s, o) => s + o.sumA, 0),
+    b: orgs.reduce((s, o) => s + o.sumB, 0),
+    c: orgs.reduce((s, o) => s + o.sumC, 0),
+  };
+  const groupTotalMax = Math.max(groupTotals.a, groupTotals.b, groupTotals.c, 1);
 
   const stats = [
     { label: t('charts.orgs').toUpperCase(), value: String(orgs.length) },
@@ -179,7 +196,8 @@ export default function ChartsPage({ orgs }: Props) {
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+         <div style={{ flex: '1 1 0', minWidth: 0, display: 'flex', gap: '8px' }}>
           {/* Ось Y */}
           <div style={{ position: 'relative', height: `${PLOT_H}px`, width: '40px', flexShrink: 0 }}>
             {axis.ticks.map(tk => (
@@ -207,18 +225,18 @@ export default function ChartsPage({ orgs }: Props) {
                   }}
                 />
               ))}
-              {/* Группы столбиков */}
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', height: '100%', gap: '10px' }}>
-                {byTotal.map(org => (
-                  <div key={org.id} style={{ flex: 1, minWidth: '54px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '4px', height: '100%' }}>
+              {/* Группы столбиков по годам */}
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', height: '100%', gap: '28px', paddingLeft: '12px' }}>
+                {yearData.map(d => (
+                  <div key={d.year} style={{ width: '92px', flexShrink: 0, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '8px', height: '100%' }}>
                     {GROUP_META.map(g => {
-                      const val = org[g.field];
+                      const val = d[g.key];
                       return (
                         <div
                           key={g.key}
-                          title={`${org.name} — ${t(g.labelKey)}: ${val.toFixed(1)}`}
+                          title={`${d.year} — ${t(g.labelKey)}: ${val.toFixed(1)}`}
                           style={{
-                            flex: 1, maxWidth: '26px',
+                            flex: 1, maxWidth: '24px',
                             height: `${(val / axis.max) * 100}%`,
                             minHeight: val > 0 ? '2px' : '0',
                             background: GROUP_COLORS[g.key],
@@ -232,18 +250,44 @@ export default function ChartsPage({ orgs }: Props) {
                 ))}
               </div>
             </div>
-            {/* Подписи оси X */}
-            <div style={{ display: 'flex', gap: '10px', marginTop: '7px' }}>
-              {byTotal.map(org => (
+            {/* Подписи оси X — годы */}
+            <div style={{ display: 'flex', gap: '28px', marginTop: '7px', paddingLeft: '12px' }}>
+              {yearData.map(d => (
                 <div
-                  key={org.id}
-                  title={org.name}
-                  style={{ flex: 1, minWidth: '54px', textAlign: 'center', fontSize: '11px', color: '#4a3e2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  key={d.year}
+                  style={{ width: '92px', flexShrink: 0, textAlign: 'center', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', color: '#4a3e2e' }}
                 >
-                  {org.name}
+                  {d.year}
                 </div>
               ))}
             </div>
+          </div>
+         </div>
+
+          {/* Боковая сводка «Итого по группам» */}
+          <div style={{ width: '230px', flexShrink: 0, alignSelf: 'stretch', borderLeft: '1px solid #e4dcc8', paddingLeft: '22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: '#9a8a70' }}>
+              {t('charts.totalByGroup')}
+            </div>
+            {GROUP_META.map(g => {
+              const val = groupTotals[g.key];
+              return (
+                <div key={g.key}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: '#4a3e2e' }}>
+                      <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: GROUP_COLORS[g.key] }} />
+                      {t(g.labelKey)}
+                    </span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '13px', color: '#2c2820' }}>
+                      {val.toFixed(1)}
+                    </span>
+                  </div>
+                  <div style={{ height: '8px', background: '#ece6d4', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${(val / groupTotalMax) * 100}%`, height: '100%', background: GROUP_COLORS[g.key], borderRadius: '4px', minWidth: val > 0 ? '3px' : '0', transition: 'width 0.4s ease' }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
