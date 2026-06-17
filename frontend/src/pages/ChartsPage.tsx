@@ -8,7 +8,7 @@ interface Props {
   orgs: OrgWithRating[];
 }
 
-const GROUP_COLORS = { a: '#c9a84c', b: '#5a7a9a', c: '#7a9a5a' };
+const GROUP_COLORS = { a: '#7a9a5a', b: '#c9a84c', c: '#b5524a' };
 const GROUP_META: { key: 'a' | 'b' | 'c'; labelKey: 'charts.groupA' | 'charts.groupB' | 'charts.groupC'; field: 'sumA' | 'sumB' | 'sumC' }[] = [
   { key: 'a', labelKey: 'charts.groupA', field: 'sumA' },
   { key: 'b', labelKey: 'charts.groupB', field: 'sumB' },
@@ -31,6 +31,19 @@ const cardTitle: React.CSSProperties = {
   letterSpacing: '0.01em',
 };
 
+/** «Красивая» шкала оси Y: округлённый максимум и ровные деления. */
+function buildAxis(maxVal: number): { max: number; ticks: number[] } {
+  if (maxVal <= 0) return { max: 1, ticks: [0, 1] };
+  const rough = maxVal / 4;
+  const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+  const n = rough / pow;
+  const step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * pow;
+  const max = Math.ceil(maxVal / step) * step;
+  const ticks: number[] = [];
+  for (let v = 0; v <= max + 1e-9; v += step) ticks.push(Math.round(v * 100) / 100);
+  return { max, ticks };
+}
+
 export default function ChartsPage({ orgs }: Props) {
   const { t } = useTranslation();
   if (orgs.length === 0) {
@@ -52,6 +65,11 @@ export default function ChartsPage({ orgs }: Props) {
     .map(lvl => ({ lvl, count: orgs.filter(o => o.level === lvl).length }))
     .filter(d => d.count > 0);
   const maxLevelCount = Math.max(...levelCounts.map(d => d.count), 1);
+
+  // Шкала для столбчатой диаграммы по группам (А/Б/В).
+  const groupMax = Math.max(...orgs.flatMap(o => [o.sumA, o.sumB, o.sumC]), 1);
+  const axis = buildAxis(groupMax);
+  const PLOT_H = 240;
 
   const stats = [
     { label: t('charts.orgs').toUpperCase(), value: String(orgs.length) },
@@ -146,6 +164,87 @@ export default function ChartsPage({ orgs }: Props) {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* ── Столбчатая диаграмма по группам (А/Б/В) ── */}
+      <div style={card}>
+        <h3 style={cardTitle}>{t('charts.groupBars')}</h3>
+        {/* Легенда */}
+        <div style={{ display: 'flex', gap: '18px', marginBottom: '18px', flexWrap: 'wrap' }}>
+          {GROUP_META.map(g => (
+            <div key={g.key} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: '#4a3e2e' }}>
+              <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: GROUP_COLORS[g.key] }} />
+              {t(g.labelKey)}
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {/* Ось Y */}
+          <div style={{ position: 'relative', height: `${PLOT_H}px`, width: '40px', flexShrink: 0 }}>
+            {axis.ticks.map(tk => (
+              <div
+                key={tk}
+                style={{
+                  position: 'absolute', right: '4px', bottom: `${(tk / axis.max) * 100}%`,
+                  transform: 'translateY(50%)', fontSize: '10px', fontFamily: 'monospace', color: '#9a8a70',
+                }}
+              >
+                {tk}
+              </div>
+            ))}
+          </div>
+          {/* Область графика */}
+          <div style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
+            <div style={{ position: 'relative', height: `${PLOT_H}px` }}>
+              {/* Сетка */}
+              {axis.ticks.map(tk => (
+                <div
+                  key={tk}
+                  style={{
+                    position: 'absolute', left: 0, right: 0, bottom: `${(tk / axis.max) * 100}%`,
+                    borderTop: tk === 0 ? '1px solid #d4c8ae' : '1px dashed #e4dcc8',
+                  }}
+                />
+              ))}
+              {/* Группы столбиков */}
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', height: '100%', gap: '10px' }}>
+                {byTotal.map(org => (
+                  <div key={org.id} style={{ flex: 1, minWidth: '54px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '4px', height: '100%' }}>
+                    {GROUP_META.map(g => {
+                      const val = org[g.field];
+                      return (
+                        <div
+                          key={g.key}
+                          title={`${org.name} — ${t(g.labelKey)}: ${val.toFixed(1)}`}
+                          style={{
+                            flex: 1, maxWidth: '26px',
+                            height: `${(val / axis.max) * 100}%`,
+                            minHeight: val > 0 ? '2px' : '0',
+                            background: GROUP_COLORS[g.key],
+                            borderRadius: '3px 3px 0 0',
+                            transition: 'height 0.4s ease',
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Подписи оси X */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '7px' }}>
+              {byTotal.map(org => (
+                <div
+                  key={org.id}
+                  title={org.name}
+                  style={{ flex: 1, minWidth: '54px', textAlign: 'center', fontSize: '11px', color: '#4a3e2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                >
+                  {org.name}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
