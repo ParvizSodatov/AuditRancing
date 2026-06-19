@@ -4,12 +4,14 @@ import { randomUUID } from 'node:crypto';
 import { config } from '../config/env.js';
 
 // Локальная БД (localhost) работает без SSL; облачная (Render, Neon, Supabase) — требует SSL.
+// DATABASE_SSL=false принудительно отключает SSL (например, Postgres в Docker, где SSL нет).
 const isLocal = /@(localhost|127\.0\.0\.1)/.test(config.databaseUrl);
+const sslDisabled = isLocal || process.env.DATABASE_SSL === 'false';
 
 /** Пул соединений с PostgreSQL — единый на процесс. */
 export const pool = new pg.Pool({
   connectionString: config.databaseUrl,
-  ssl: isLocal ? undefined : { rejectUnauthorized: false },
+  ssl: sslDisabled ? undefined : { rejectUnauthorized: false },
 });
 
 /**

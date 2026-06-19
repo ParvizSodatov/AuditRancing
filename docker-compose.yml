@@ -1,0 +1,54 @@
+# Локальный продакшн-стек AuditRank в контейнерах.
+# Запуск:  docker compose up --build
+# Открыть: http://localhost:8080
+# Остановить: docker compose down   (данные БД сохраняются в томе pgdata)
+
+services:
+  # ── База данных PostgreSQL ──
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auditrank
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auditrank"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Бэкенд (Express API) ──
+  backend:
+    build: ./backend
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      # Хост 'db' = имя сервиса базы выше; контейнеры видят друг друга по именам.
+      DATABASE_URL: postgres://postgres:postgres@db:5432/auditrank
+      # Локальная база в контейнере без SSL — отключаем его явно.
+      DATABASE_SSL: "false"
+      CORS_ORIGIN: http://localhost:8080
+      APP_URL: http://localhost:8080
+      # Локальные значения. На реальном сервере замени на длинные случайные!
+      JWT_SECRET: local-dev-secret-change-on-server
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: admin123
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── Фронтенд (статика Vite) + nginx (отдаёт фронт и проксирует /api) ──
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
