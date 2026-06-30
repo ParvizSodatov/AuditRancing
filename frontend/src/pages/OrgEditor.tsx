@@ -35,8 +35,9 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
     setSaved(false);
   };
 
-  // Ключи показателей, которые ещё не выбраны (остались на «не задано» = 0).
-  const missingKeys = ALL_INDICATOR_KEYS.filter(key => !(kScores[key] > 0));
+  // Ключи показателей, которые ещё не выбраны (UNSET = -1). Явный балл 0
+  // («Доход отсутствует» и т.п.) — это ответ, незаполненным не считается.
+  const missingKeys = ALL_INDICATOR_KEYS.filter(key => kScores[key] < 0);
   const totalIndicators = ALL_INDICATOR_KEYS.length;
 
   const handleSave = () => {

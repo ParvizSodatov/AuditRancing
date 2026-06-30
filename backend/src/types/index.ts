@@ -11,12 +11,20 @@ export interface OrgKScores {
   k22: number; k23: number; k24: number; k25: number;
 }
 
+/**
+ * «Не выбрано» = -1 — показатель ещё не заполнен (отличается от настоящего балла 0,
+ * например «Доход отсутствует»). Недостающие ключи заполняются этим значением,
+ * поэтому новая организация стартует полностью незаполненной. Должно совпадать
+ * с UNSET во фронтенде (frontend/src/types).
+ */
+export const UNSET = -1;
+
 export const DEFAULT_SCORES: OrgKScores = {
-  k1: 0, k2: 0, k3: 0, k4: 0, k5: 0, k6: 0,
-  k7: 0, k8: 0, k9: 0, k10: 0, k11: 0, k12: 0,
-  k13: 0, k14: 0, k15: 0, k16: 0, k17: 0, k18: 0,
-  k19: 0, k20: 0, k21: 0,
-  k22: 0, k23: 0, k24: 0, k25: 0,
+  k1: UNSET, k2: UNSET, k3: UNSET, k4: UNSET, k5: UNSET, k6: UNSET,
+  k7: UNSET, k8: UNSET, k9: UNSET, k10: UNSET, k11: UNSET, k12: UNSET,
+  k13: UNSET, k14: UNSET, k15: UNSET, k16: UNSET, k17: UNSET, k18: UNSET,
+  k19: UNSET, k20: UNSET, k21: UNSET,
+  k22: UNSET, k23: UNSET, k24: UNSET, k25: UNSET,
 };
 
 export interface AuditOrg {

@@ -13,7 +13,8 @@ const GROUP_C_KEYS = ['k22','k23','k24','k25'] as const;
 export const MAX_TOTAL = MAX_TOTAL_SCORE;
 
 function sumKeys(scores: OrgKScores, keys: readonly string[]): number {
-  return keys.reduce((s, k) => s + (scores[k as keyof OrgKScores] ?? 0), 0);
+  // «Не выбрано» (UNSET = -1) и любой невыбранный показатель идут в сумму как 0.
+  return keys.reduce((s, k) => s + Math.max(0, scores[k as keyof OrgKScores] ?? 0), 0);
 }
 
 /** Присвоение уровня по нормализованному качеству Q (%) сверху вниз по порогам. */
