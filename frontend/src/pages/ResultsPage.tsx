@@ -147,6 +147,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
             <tr style={{ background: '#1a1e2e' }}>
               {COLS.map((h, i) => {
                 const isGroup = i >= 3 && i <= 5;
+                const isLevel = i === 8;
                 return (
                   <th
                     key={h}
@@ -158,9 +159,9 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
                       fontWeight: 600,
                       padding: '10px 14px',
                       textAlign: i <= 1 ? 'left' : i === 8 || i === 9 ? 'center' : isGroup ? 'center' : 'right',
-                      whiteSpace: isGroup ? 'normal' : 'nowrap',
-                      width: isGroup ? '115px' : undefined,
-                      lineHeight: isGroup ? 1.3 : undefined,
+                      whiteSpace: isGroup || isLevel ? 'normal' : 'nowrap',
+                      width: isGroup ? '115px' : isLevel ? '92px' : undefined,
+                      lineHeight: isGroup || isLevel ? 1.3 : undefined,
                       verticalAlign: 'middle',
                     }}
                   >
