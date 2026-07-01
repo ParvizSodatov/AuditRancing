@@ -18,7 +18,7 @@ export default function ResultsPage({ orgs, mode, onMode }: Props) {
   const { t } = useTranslation();
   const toast = useToast();
 
-  const COLS = ['#', t('results.colName'), t('results.colScore'), t('results.colGroupA'), t('results.colGroupB'), t('results.colGroupC'), 'Методика', t('results.colQuality'), t('results.colLevel'), t('results.colExcel')];
+  const COLS = ['#', t('results.colName'), t('results.colScore'), t('results.colGroupA'), t('results.colGroupB'), t('results.colGroupC'), t('results.colPj'), t('results.colQuality'), t('results.colLevel'), t('results.colExcel')];
 
   const sorted = [...orgs].sort((a, b) =>
     mode === 'score' ? b.totalScore - a.totalScore : a.pj - b.pj

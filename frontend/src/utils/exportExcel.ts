@@ -1,5 +1,5 @@
 import type { OrgWithRating, OrgKScores, RankMode } from '../types';
-import { getIndicatorGroups } from './indicatorOptions';
+import { getIndicatorGroups, GROUP_LETTER } from './indicatorOptions';
 import i18n from '../i18n';
 
 /** Колонки листа — порядок и ширина совпадают с таблицей результатов. */
@@ -191,7 +191,7 @@ export async function exportOrgToExcel(org: OrgWithRating) {
       // Подбираем выбранный вариант по баллу (как в редакторе организации).
       const chosen = ind.options.find(opt => opt.score === score);
       const row = ws.addRow([
-        group.id,
+        GROUP_LETTER[group.id],
         ind.code,
         ind.name,
         chosen ? chosen.label : i18n.t('exportXlsx.notSet'),

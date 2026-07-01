@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AuditOrg, OrgWithRating, OrgKScores } from '../types';
-import { getIndicatorGroups, ALL_INDICATOR_KEYS } from '../utils/indicatorOptions';
+import { getIndicatorGroups, ALL_INDICATOR_KEYS, GROUP_LETTER } from '../utils/indicatorOptions';
 import { useToast } from '../components/Toast';
 import RatingBadge from '../components/RatingBadge';
 
@@ -77,7 +77,7 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
     { label: t('results.colGroupA'), value: org.sumA.toFixed(1), wide: true },
     { label: t('results.colGroupB'), value: org.sumB.toFixed(1), wide: true },
     { label: t('results.colGroupC'), value: org.sumC.toFixed(1), wide: true },
-    { label: 'Методика', value: org.pj.toFixed(3) },
+    { label: t('results.colPj'), value: org.pj.toFixed(3) },
     { label: t('results.colQuality'), value: `${org.q.toFixed(0)}%` },
   ];
 
@@ -156,7 +156,7 @@ export default function OrgEditor({ org, onSave, onDelete }: Props) {
             {/* Group header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 28px', background: '#e8e2d0', borderTop: '1px solid #d4c8ae', borderBottom: '1px solid #d4c8ae' }}>
               <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#c9a84c', color: '#1a1e2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
-                {group.id}
+                {GROUP_LETTER[group.id]}
               </span>
               <span style={{ fontSize: '13px', fontWeight: 600, color: '#2c2820' }}>
                 {group.label}
