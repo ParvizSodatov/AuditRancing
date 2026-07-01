@@ -192,6 +192,11 @@ const ru = {
     summaryPjQ: 'Методика: {{pj}}  Качество (Q): {{q}}%',
     summaryLevel: 'Уровень рейтинга: {{level}}',
     notSet: '— не задано —',
+    chartGroupsTitle: 'Баллы по группам',
+    chartIndicatorsTitle: 'Баллы по показателям',
+    chartGroupA: 'Экономика',
+    chartGroupB: 'Профессионализм',
+    chartGroupC: 'Репутация',
   },
 
   print: {

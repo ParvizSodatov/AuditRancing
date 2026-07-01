@@ -1,6 +1,10 @@
 import type { OrgWithRating, OrgKScores, RankMode } from '../types';
 import { getIndicatorGroups, GROUP_LETTER } from './indicatorOptions';
+import type { BarDatum } from './chartImage';
 import i18n from '../i18n';
+
+/** Цвета групп А/Б/В — совпадают с экраном «Аналитика». */
+const GROUP_COLORS: Record<'A' | 'B' | 'C', string> = { A: '#7a9a5a', B: '#c9a84c', C: '#b5524a' };
 
 /** Колонки листа — порядок и ширина совпадают с таблицей результатов. */
 function ratingColumns(): { header: string; width: number }[] {
@@ -184,10 +188,13 @@ export async function exportOrgToExcel(org: OrgWithRating) {
   });
 
   // ── Строки по всем 25 показателям ──
+  // Попутно собираем данные для горизонтальной диаграммы (код показателя → балл).
+  const indicatorBars: BarDatum[] = [];
   let rowIndex = 0;
   getIndicatorGroups(i18n.t).forEach(group => {
     group.indicators.forEach(ind => {
       const score = org.kScores[ind.key as keyof OrgKScores];
+      indicatorBars.push({ label: ind.code, value: Math.max(0, Number(score)), color: GROUP_COLORS[group.id] });
       // Подбираем выбранный вариант по баллу (как в редакторе организации).
       const chosen = ind.options.find(opt => opt.score === score);
       const row = ws.addRow([
@@ -216,6 +223,27 @@ export async function exportOrgToExcel(org: OrgWithRating) {
       rowIndex++;
     });
   });
+
+  // ── Диаграммы под таблицей (вставляются картинками — ExcelJS не создаёт нативные графики) ──
+  const { verticalBarChart, horizontalBarChart } = await import('./chartImage');
+  const groupBars: BarDatum[] = [
+    { label: i18n.t('exportXlsx.chartGroupA'), value: Number(org.sumA.toFixed(1)), color: GROUP_COLORS.A },
+    { label: i18n.t('exportXlsx.chartGroupB'), value: Number(org.sumB.toFixed(1)), color: GROUP_COLORS.B },
+    { label: i18n.t('exportXlsx.chartGroupC'), value: Number(org.sumC.toFixed(1)), color: GROUP_COLORS.C },
+  ];
+  const chartV = verticalBarChart(i18n.t('exportXlsx.chartGroupsTitle'), groupBars);
+  const chartH = horizontalBarChart(i18n.t('exportXlsx.chartIndicatorsTitle'), indicatorBars);
+
+  // Пиксели изображения переводим в строки листа (высота строки по умолчанию ≈ 15px)
+  // с запасом, чтобы диаграммы не наезжали друг на друга.
+  const ROW_PX = 15;
+  let cursor = ws.rowCount + 2; // отступ после таблицы; tl.row отсчитывается от 0
+  const idV = wb.addImage({ base64: chartV.base64, extension: 'png' });
+  ws.addImage(idV, { tl: { col: 0, row: cursor }, ext: { width: chartV.width, height: chartV.height } });
+
+  cursor += Math.ceil(chartV.height / ROW_PX) + 2;
+  const idH = wb.addImage({ base64: chartH.base64, extension: 'png' });
+  ws.addImage(idH, { tl: { col: 0, row: cursor }, ext: { width: chartH.width, height: chartH.height } });
 
   const buf = await wb.xlsx.writeBuffer();
   const date = new Date().toISOString().slice(0, 10);

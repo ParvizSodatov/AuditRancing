@@ -194,6 +194,11 @@ const tg: Dictionary = {
     summaryPjQ: 'Усул: {{pj}}  Сифат (Q): {{q}}%',
     summaryLevel: 'Дараҷаи радабандӣ: {{level}}',
     notSet: '— муайян нашудааст —',
+    chartGroupsTitle: 'Холҳо аз рӯи гурӯҳҳо',
+    chartIndicatorsTitle: 'Холҳо аз рӯи нишондиҳандаҳо',
+    chartGroupA: 'Иқтисод',
+    chartGroupB: 'Касбият',
+    chartGroupC: 'Обрӯ',
   },
 
   print: {
